@@ -1,4 +1,4 @@
-import sqlite3
+import sqlite3 
 
 # Connect to the database
 def get_db_connection():

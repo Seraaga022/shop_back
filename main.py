@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template, send_file, send_from_directory
+from flask_sqlalchemy import SQLAlchemy
 import DATABASE as DATABASE
 from flask_cors import CORS, cross_origin
 import sqlite3
@@ -10,11 +11,12 @@ import ast
 app = Flask(__name__)
 CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 # app.config['SECRET_KEY'] = 'its my very secret password that no one supposed to know'
 # logging.getLogger('flask_cors').level = logging.DEBUG
 # people_cors = CORS(app, resources={r"/people*": {"origins": "*"}})
-
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/DATAbase.db'
+db = SQLAlchemy(app)
 conn = sqlite3.connect('db/DATAbase.db')
 c = conn.cursor()
 
@@ -170,17 +172,17 @@ def delete_customer(customer_id):
     conn.close()
 
 # Get all customers
-def get_all_customers(limit):
+def get_all_customers(RngStart, RngEnd):
 # def get_all_customers():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(f'SELECT * FROM customers LIMIT {limit}')
-    # cur.execute(f'SELECT * FROM customers')
+    cur.execute(f'SELECT * FROM customers LIMIT {RngEnd - RngStart + 1} OFFSET {RngStart}')
+    # cur.execute(f'SELECT * FROM customers LIMIT {limit}')
     customers = cur.fetchall()
     final_customers = []
     for customer in customers:
         final_customers.append({
-            "id": customer[0],
+            "customer_id": customer[0],
             "name": customer[1],
             "email": customer[2],
             "phone": customer[3],
@@ -210,7 +212,7 @@ def get_product(product_id):
     cur.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
     product = cur.fetchone()
     final_product = {
-            "id": product[0],
+            "product_id": product[0],
             "name": product[1],
             "description": product[2],
             "price": product[3],
@@ -248,7 +250,7 @@ def get_all_products(limit):
     final_products = []
     for product in products:
         final_products.append({
-            "id": product[0],
+            "product_id": product[0],
             "name": product[1],
             "description": product[2],
             "price": product[3],
@@ -271,7 +273,6 @@ def test_backEnd():
 
 
 
-# CUSTOMER
 # @app.route('/customer', methods=['GET'])
 # def list_customer():
 #     range = request.args.get('range')
@@ -282,20 +283,130 @@ def test_backEnd():
 #     response.headers['Content-Range'] = len(customers)
 #     return response
 
+# CUSTOMER
+# this is good, dont delete it
+# @app.route('/customer', methods=['GET'])
+# def list_customer():
+#     logging.debug("Received 'GET' request for /customer")
+#     range_str = request.args.get('range')
+#     sort_str = request.args.get('sort')
+
+#     # Initialize variables for pagination and sorting
+#     start = 0
+#     end = 10 # Default end value, adjust as needed
+#     field = 'id' # Default sort field
+#     order = 'ASC' # Default sort order
+
+#     # Parse range if provided
+#     if range_str:
+#         range_list = json.loads(range_str)
+#         start = range_list[0]
+#         end = range_list[1]
+    
+#     # Parse sort if provided
+#     if sort_str:
+#         sort_list = json.loads(sort_str)
+#         field = sort_list[0]
+#         order = sort_list[1]
+        
+#     # Log the parsed parameters for debugging
+#     # print(f"Range: {start}-{end}, Sort: {field} {order}")
+#     logging.debug(f'Range: {start}-{end}, Sort: {field} {order}')
+    
+#     # Establish a database connection and cursor if not already done
+#     conn = sqlite3.connect('db/DATAbase.db')
+#     cur = conn.cursor()
+    
+#     # allowed_fields = ['customer_id', 'name', 'email', 'phone', 'registration_date']
+#     # if field not in allowed_fields:
+#     #     return jsonify({"error": "Invalid field for sorting"}), 400
+
+#     # For example, if you're using SQLite, your query might look like this:
+#     cur.execute(f'SELECT * FROM customers ORDER BY customer_{field} {order} LIMIT ? OFFSET ?', (end - start + 1, start))
+    
+#     # Fetch the customers from the database
+#     customers = cur.fetchall()
+    
+#     # Convert the database records to a list of dictionaries for the response
+#     final_customers = []
+#     for customer in customers:
+#         final_customers.append({
+#             "customer_id": customer[0],
+#             "name": customer[1],
+#             "email": customer[2],
+#             "phone": customer[3],
+#             "registration_date": customer[4],
+#         })
+    
+#     # Return the customers as JSON
+#     return jsonify(final_customers), 200
+
+# its working completely with range and sort and filter
 @app.route('/customer', methods=['GET'])
 def list_customer():
-      range_str = request.args.get('range')
-      if range_str:
-          range_list = json.loads(range_str)
-          limit = range_list[1] - range_list[0] + 1 # Calculate the limit based on the range
-          customers = get_all_customers(limit)
-      else:
-          # Handle the case where 'range' is not provided
-          customers = get_all_customers() # Or set a default limit
-      response = jsonify(customers)
-      response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
-      response.headers['Content-Range'] = f'items 0-{len(customers)-1}/{len(customers)}' # Adjust the format as needed
-      return response
+
+    logging.debug("Received 'GET' request for /customer")
+    range_str = request.args.get('range')
+    sort_str = request.args.get('sort')
+    filter_str = request.args.get('filter')
+    
+    # Initialize variables for pagination, sorting, and filtering
+    start = 0
+    end = 10 # Default end value, adjust as needed
+    field = 'id' # Default sort field
+    order = 'ASC' # Default sort order
+    filters = {} # Default empty filter
+    
+    # Parse range if provided
+    if range_str:
+        range_list = json.loads(range_str)
+        start = range_list[0]
+        end = range_list[1]
+    
+    # Parse sort if provided
+    if sort_str:
+        sort_list = json.loads(sort_str)
+        field = sort_list[0]
+        order = sort_list[1]
+    
+    # Parse filter if provided
+    if filter_str:
+        filters = json.loads(filter_str)
+    
+    # Establish a database connection and cursor if not already done
+    conn = sqlite3.connect('db/DATAbase.db')
+    cur = conn.cursor()
+
+    # Adjust your database query to use LIMIT, OFFSET, ORDER BY, and WHERE based on start, end, field, order, and filters
+    # For example, if you're using SQLite, your query might look like this:
+    # Note: This is a simplified example. The actual implementation will depend on your database and ORM.
+    # Also, ensure to validate the field, order, and filters against a list of allowed values to prevent SQL injection.
+    query = f'SELECT * FROM customers ORDER BY customer_{field} {order} LIMIT ? OFFSET ?'
+    params = (end - start + 1, start)
+    
+    # Apply filters to the query
+    for key, value in filters.items():
+        query += f' AND {key} = ?'
+        params += (value,)
+    
+    cur.execute(query, params)
+    
+    # Fetch the customers from the database
+    customers = cur.fetchall()
+    
+    # Convert the database records to a list of dictionaries for the response
+    final_customers = []
+    for customer in customers:
+        final_customers.append({
+            "customer_id": customer[0],
+            "name": customer[1],
+            "email": customer[2],
+            "phone": customer[3],
+            "registration_date": customer[4],
+        })
+    
+    # Return the customers as JSON
+    return jsonify(final_customers), 200
 
 @app.route('/customer', methods=['POST'])
 def add_customer():
@@ -323,7 +434,7 @@ def update_customer_by_id(customer_id):
 @app.route('/customer/<int:customer_id>', methods=['DELETE'])
 def delete_customer_by_id(customer_id):
     delete_customer(customer_id)
-    return jsonify({"id":customer_id}), 200
+    return jsonify({"customer_id":customer_id}), 200
     
 
 
@@ -368,7 +479,7 @@ def update_product_by_id(product_id):
 @app.route('/product/<int:product_id>', methods=['DELETE'])
 def delete_product_by_id(product_id):
     delete_product(product_id)
-    return jsonify({"id":product_id}), 200
+    return jsonify({"product_id":product_id}), 200
 
 
 
