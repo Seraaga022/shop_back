@@ -5,18 +5,20 @@ from flask_cors import CORS, cross_origin
 import sqlite3
 import json
 import logging
-import ast
+import base64
 
 
 app = Flask(__name__)
 CORS(app)
+cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 logging.basicConfig(level=logging.INFO)
 # app.config['SECRET_KEY'] = 'its my very secret password that no one supposed to know'
 # logging.getLogger('flask_cors').level = logging.DEBUG
-# people_cors = CORS(app, resources={r"/people*": {"origins": "*"}})
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/DATAbase.db'
-db = SQLAlchemy(app)
+
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/DATAbase.db'
+# db = SQLAlchemy(app)
+
 conn = sqlite3.connect('db/DATAbase.db')
 c = conn.cursor()
 
@@ -52,16 +54,21 @@ c = conn.cursor()
 #     conn.commit()
 # add_one_category()
 
+
 @app.route('/Pcategories')
 def get_parent_categories():
     category_list = []
     for category in DATABASE.GET_PARENT_CATEGORIES:
+        with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+
         category_dict = {
             "category_id": category[0],
             "name": category[1],
             "description": category[2],
             "parent_category_id": category[3],
             "created_at": category[4],
+            "image": encoded_string,
         }
         category_list.append(category_dict)
     return jsonify(category_list), 200
@@ -71,12 +78,16 @@ def get_parent_categories():
 def get_all_categories():
     category_list = []
     for category in DATABASE.GET_ALL_CATEGORIES:
+        with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+
         category_dict = {
             "category_id": category[0],
             "name": category[1],
             "description": category[2],
             "parent_category_id": category[3],
             "created_at": category[4],
+            "image": encoded_string,
         }
         category_list.append(category_dict)
     return jsonify(category_list), 200
@@ -84,37 +95,25 @@ def get_all_categories():
 
 @app.route('/products', methods=['GET'])
 def get_products():
-    products_list = []
+    final_products = []
     for product in DATABASE.GET_ALL_PRODUCTS:
-        product_dict = {
+        # Read the image file and convert it to base64
+        with open(f'static/product_images/{product[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        
+        final_products.append({
             "product_id": product[0],
             "name": product[1],
             "description": product[2],
             "price": product[3],
             "category_id": product[4],
-            "image": f'/static/products_images/{product[0]}' # Use product ID directly
-        }
-        products_list.append(product_dict)
-    return jsonify(products_list), 200
+            "image": encoded_string, # The base64 encoded image
+        })
+
+    return jsonify(final_products), 200
+
     # if request.method == 'GET':
     # elif request.method == 'POST':
-
-
-# @app.route('/main/products/product/<path:filename>')
-# def get_image(filename):
-#     print('serving image')
-#     return send_from_directory('static/product_images', filename)
-
-
-# @app.route('/main/products/product/<int:id>')
-# def serve_image(id):
-#     filename = str(id) # Do not include the extension here
-#     return send_from_directory('static/products_images', filename)
-
-
-
-# "image": f'/static/products_images/{product[0]}'
-
 
 # --------------------------------------------------------------------------------------------------------------------
 
@@ -126,13 +125,12 @@ def get_db_connection():
     return conn
 
 
-
 # CUSTOMER
 # Create a new customer
 def create_customer(name, email, phone):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("INSERT INTO customers (name, email, phone_number, registration_date) VALUES (?, ?, ?, DATETIME('now'))", (name, email, phone))
+    cur.execute(f"INSERT INTO customers (name, email, phone_number, registration_date) VALUES ({name}, {email}, {phone}, DATETIME('now'))")
     conn.commit()
     customer_id = cur.lastrowid
     conn.close()
@@ -171,25 +169,25 @@ def delete_customer(customer_id):
     conn.commit()
     conn.close()
 
-# Get all customers
-def get_all_customers(RngStart, RngEnd):
-# def get_all_customers():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(f'SELECT * FROM customers LIMIT {RngEnd - RngStart + 1} OFFSET {RngStart}')
-    # cur.execute(f'SELECT * FROM customers LIMIT {limit}')
-    customers = cur.fetchall()
-    final_customers = []
-    for customer in customers:
-        final_customers.append({
-            "customer_id": customer[0],
-            "name": customer[1],
-            "email": customer[2],
-            "phone": customer[3],
-            "registration_date": customer[4],
-        })
-    conn.close()
-    return final_customers
+# # Get all customers
+# def get_all_customers(RngStart, RngEnd):
+# # def get_all_customers():
+#     conn = get_db_connection()
+#     cur = conn.cursor()
+#     cur.execute(f'SELECT * FROM customers LIMIT {RngEnd - RngStart + 1} OFFSET {RngStart}')
+#     # cur.execute(f'SELECT * FROM customers LIMIT {limit}')
+#     customers = cur.fetchall()
+#     final_customers = []
+#     for customer in customers:
+#         final_customers.append({
+#             "customer_id": customer[0],
+#             "name": customer[1],
+#             "email": customer[2],
+#             "phone": customer[3],
+#             "registration_date": customer[4],
+#         })
+#     conn.close()
+#     return final_customers
 
 
 
@@ -239,26 +237,26 @@ def delete_product(product_id):
     conn.commit()
     conn.close()
 
-# Get all products
-def get_all_products(limit):
-# def get_all_customers():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(f'SELECT * FROM products LIMIT {limit}')
-    # cur.execute(f'SELECT * FROM products')
-    products = cur.fetchall()
-    final_products = []
-    for product in products:
-        final_products.append({
-            "product_id": product[0],
-            "name": product[1],
-            "description": product[2],
-            "price": product[3],
-            "category_id": product[4],
-            "image": product[5],
-        })
-    conn.close()
-    return final_products
+# # Get all products
+# def get_all_products(limit):
+# # def get_all_customers():
+#     conn = get_db_connection()
+#     cur = conn.cursor()
+#     cur.execute(f'SELECT * FROM products LIMIT {limit}')
+#     # cur.execute(f'SELECT * FROM products')
+#     products = cur.fetchall()
+#     final_products = []
+#     for product in products:
+#         final_products.append({
+#             "product_id": product[0],
+#             "name": product[1],
+#             "description": product[2],
+#             "price": product[3],
+#             "category_id": product[4],
+#             "image": product[5],
+#         })
+#     conn.close()
+#     return final_products
 
 
 
@@ -344,7 +342,6 @@ def test_backEnd():
 # its working completely with range and sort and filter
 @app.route('/customer', methods=['GET'])
 def list_customer():
-
     logging.debug("Received 'GET' request for /customer")
     range_str = request.args.get('range')
     sort_str = request.args.get('sort')
@@ -387,7 +384,7 @@ def list_customer():
     # Apply filters to the query
     for key, value in filters.items():
         query += f' AND {key} = ?'
-        params += (value,)
+        params += (value)
     
     cur.execute(query, params)
     
@@ -404,9 +401,13 @@ def list_customer():
             "phone": customer[3],
             "registration_date": customer[4],
         })
-    
+
+    total_count = len(DATABASE.GET_ALL_CUSTOMERS)
     # Return the customers as JSON
-    return jsonify(final_customers), 200
+    response = jsonify(final_customers)
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] = f'customers 0-{len(final_customers)}/{total_count}'
+    return response, 200
 
 @app.route('/customer', methods=['POST'])
 def add_customer():
@@ -492,4 +493,4 @@ def error(e):
     return render_template('404.html'), 404   
 
 if __name__ == '__main__':
-    app.run(debug=True,port=80)
+    app.run(debug=True)
