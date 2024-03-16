@@ -520,6 +520,25 @@ def delete_product_by_id(product_id):
 
 
 
+@app.route('/cart', methods=['POST'])
+def handle_Add_to_cart():
+    # data = request.get_json()
+    # product_id = data.get('product_id')
+    # quantity = data.get('quantity', 1)
+    product_id = request.json["product_id"]
+    quantity = request.json["quantity"]
+    customer_id = request.json["customer_id"]
+
+    # Insert the data into the database
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO cart (customer_id, product_id, quantity, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)''', (customer_id, product_id, quantity))
+
+    conn.commit()
+    return jsonify({'message': 'Item added to cart'}), 200
+
 
 
 
