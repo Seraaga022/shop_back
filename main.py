@@ -461,16 +461,6 @@ def delete_customer_by_id(customer_id):
 
 
 # PRODUCT
-@app.route('/product', methods=['GET'])
-def list_product():
-    range = request.args.get('range')
-    products = get_all_products(int(range[3])+1)
-    # products = get_all_customers()
-    response = jsonify(products)
-    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
-    response.headers['Content-Range'] = len(products)
-    return response
-
 @app.route('/product', methods=['POST'])
 def add_product():
     name = request.json['name']
