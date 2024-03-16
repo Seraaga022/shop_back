@@ -91,6 +91,17 @@ c.execute('''CREATE TABLE IF NOT EXISTS adminLogs
               action_date DATETIME NOT NULL, 
               ip_address VARCHAR(50) NOT NULL)''')
 
+# in the cart_id and created_at, dont put anything; never.
+c.execute('''CREATE TABLE IF NOT EXISTS cart 
+            (cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
+             customer_id INTEGER NOT NULL,
+             product_id INTEGER NOT NULL,
+             quantity INTEGER NOT NULL DEFAULT 1,
+             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+             FOREIGN KEY (customer_id) REFERENCES customers (customer_id),
+             FOREIGN KEY (product_id) REFERENCES products (product_id))''')
+
 now = datetime.now()
 DateTimeNow = now.strftime("%d/%m/%Y %H:%M:%S")
 

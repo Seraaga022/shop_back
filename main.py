@@ -203,22 +203,26 @@ def create_product(name, description, price, category_id, image):
     conn.close()
     return product_id
 
-# Get a product by ID
-def get_product(product_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
-    product = cur.fetchone()
-    final_product = {
-            "product_id": product[0],
-            "name": product[1],
-            "description": product[2],
-            "price": product[3],
-            "category_id": product[4],
-            "image": product[5],
-        }
-    conn.close()
-    return final_product
+# # Get a product by ID
+# def get_product(product_id):
+#     conn = get_db_connection()
+#     cur = conn.cursor()
+#     cur.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
+#     product = cur.fetchone()
+#     with open(f'static/product_images/{product[5]}', 'rb') as image_file:
+#             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+#     final_products = {
+#             "product_id": product[0],
+#             "name": product[1],
+#             "description": product[2],
+#             "price": product[3],
+#             "category_id": product[4],
+#             "image": encoded_string, # The base64 encoded image
+#         }
+#     conn.close()
+#     if product is None:
+#         return '', 404
+#     return jsonify(final_products), 200
 
 # Update a product
 def update_product(product_id, name, description, price, category_id, image):
@@ -269,6 +273,23 @@ def delete_product(product_id):
 def test_backEnd():
     return jsonify('ok')
 
+
+@app.route('/category/<int:id>')
+def get_category_by_id(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(f"SELECT * from categories where category_id = ?", (id,))
+    category = cur.fetchone()
+    final_cate = {
+        "category_id": category[0],
+        "name": category[1],
+        "description": category[2],
+        "parent_category_id": category[3],
+        "created_at": category[4],
+        "image": category[5],
+    }
+    conn.close()
+    return jsonify(final_cate), 200
 
 
 # @app.route('/customer', methods=['GET'])
@@ -462,10 +483,24 @@ def add_product():
 
 @app.route('/product/<int:product_id>', methods=['GET'])
 def get_product_by_id(product_id):
-    product = get_product(product_id)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
+    product = cur.fetchone()
+    with open(f'static/product_images/{product[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+    final_products = {
+            "product_id": product[0],
+            "name": product[1],
+            "description": product[2],
+            "price": product[3],
+            "category_id": product[4],
+            "image": encoded_string, # The base64 encoded image
+        }
+    conn.close()
     if product is None:
         return '', 404
-    return jsonify(product), 200
+    return jsonify(final_products), 200
 
 @app.route('/product/<int:product_id>', methods=['PUT'])
 def update_product_by_id(product_id):
