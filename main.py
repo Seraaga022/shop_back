@@ -507,14 +507,30 @@ def delete_product_by_id(product_id):
     delete_product(product_id)
     return jsonify({"product_id":product_id}), 200
 
+# check if client exicsts or not
+def user_exists(phone, username):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''SELECT * FROM customers WHERE phone_number = ? AND name = ?''', (phone, username))
+        # Fetch the result
+    result = cur.fetchone()
+        # Close the cursor and connection
+    cur.close()
+    conn.close()
+        # If a result is found, the user exists; otherwise, they do not
+    return result is not None
 
-
+@app.route('/Login', methods = ['POST'])
+def handle_login():
+    name = request.json["name"]
+    phone = request.json["phone"]
+    if user_exists(phone, name):
+        return jsonify({'message': 'User exists'}), 200
+    else:
+        return jsonify({'message': 'User does not exist'}), 200
 
 @app.route('/cart', methods=['POST'])
 def handle_Add_to_cart():
-    # data = request.get_json()
-    # product_id = data.get('product_id')
-    # quantity = data.get('quantity', 1)
     product_id = request.json["product_id"]
     quantity = request.json["quantity"]
     customer_id = request.json["customer_id"]
