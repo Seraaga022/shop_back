@@ -19,9 +19,6 @@ logging.basicConfig(level=logging.INFO)
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/DATAbase.db'
 # db = SQLAlchemy(app)
 
-conn = sqlite3.connect('db/DATAbase.db')
-c = conn.cursor()
-
 
 
 
@@ -94,7 +91,7 @@ def get_all_categories():
 
 
 @app.route('/products', methods=['GET'])
-def get_products():
+def get_products_for_customer():
     final_products = []
     for product in DATABASE.GET_ALL_PRODUCTS:
         # Read the image file and convert it to base64
@@ -115,10 +112,10 @@ def get_products():
     # if request.method == 'GET':
     # elif request.method == 'POST':
 
+
 # --------------------------------------------------------------------------------------------------------------------
 
 
-# Connect to the database
 def get_db_connection():
     conn = sqlite3.connect('db/DATAbase.db')
     conn.row_factory = sqlite3.Row
@@ -291,16 +288,6 @@ def get_category_by_id(id):
     conn.close()
     return jsonify(final_cate), 200
 
-
-# @app.route('/customer', methods=['GET'])
-# def list_customer():
-#     range = request.args.get('range')
-#     customers = get_all_customers(int(range[3])+1)
-#     # customers = get_all_customers()
-#     response = jsonify(customers)
-#     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
-#     response.headers['Content-Range'] = len(customers)
-#     return response
 
 # CUSTOMER
 # this is good, dont delete it
@@ -525,9 +512,33 @@ def handle_login():
     name = request.json["name"]
     phone = request.json["phone"]
     if user_exists(phone, name):
-        return jsonify({'message': 'User exists'}), 200
+        return jsonify({'message': 'User exists'}), 201
     else:
-        return jsonify({'message': 'User does not exist'}), 200
+        return jsonify({'message': 'User does not exist'}), 400
+
+@app.route('/SignUp', methods=['POST'])
+def signup():
+        # Get the data from the request
+    data = request.get_json()
+        # Extract the customer details from the request data
+    name = data.get('name')
+    email = data.get('email')
+    phone = data.get('phone')
+
+    if user_exists(phone, name):
+        return jsonify({'message': 'User already exists'}), 400
+
+        # Insert the new customer into the database
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO customers (name, email, phone_number, registration_date) VALUES (?, ?, ?, DATETIME('now'))''', (name, email, phone))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({'message': 'User registered successfully'}), 201
+
 
 @app.route('/cart', methods=['POST'])
 def handle_Add_to_cart():
