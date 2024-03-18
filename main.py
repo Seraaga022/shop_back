@@ -1,14 +1,17 @@
 from flask import Flask, request, jsonify, render_template, send_file, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
-import DATABASE as DATABASE
 from flask_cors import CORS, cross_origin
+from PIL import Image
+import DATABASE as DATABASE
 import sqlite3
 import json
 import logging
 import base64
-from PIL import Image
 import os
 import io
+import uuid
+import time
+
 
 app = Flask(__name__)
 CORS(app)
@@ -489,6 +492,7 @@ def delete_product_by_id(product_id):
     delete_product(product_id)
     return jsonify({"product_id":product_id}), 200
 
+
 # check if client exicsts or not
 def user_exists(phone, username):
     conn = get_db_connection()
@@ -523,46 +527,20 @@ def handle_login():
         return jsonify({'message': 'User does not exist'}), 400
 
 
-# @app.route('/SignUp', methods=['POST'])
-# def signup():
-#         # Get the data from the request
-#     data = request.get_json()
-#         # Extract the customer details from the request data
-#     name = request.json["name"]
-#     email = request.json["email"]
-#     phone = request.json["phone"]
-#     base64_image = request.json["image"]
-
-#     if user_exists(phone, name):
-#         return jsonify({'message': 'User already exists'}), 400
-
-#         # Decode base64 image
-#     if base64_image:
-#         image_data = base64.b64decode(base64_image.split(',')[1])
-#         image = Image.open(io.BytesIO(image_data))
-
-#             # Convert to PNG if not already
-#         if image.format != 'PNG':
-#             image = image.convert('RGBA')
-
-#             # Save image to folder
-#         image_path = os.path.join('static/customer_img', f'{phone}.png')
-#         image.save(image_path)
-
-#         # Insert the new customer into the database
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-#     cur.execute('''
-#         INSERT INTO customers (name, email, phone_number, registration_date, image) VALUES (?, ?, ?, DATETIME('now'), ?)''', (name, email, phone, f'{phone}.png'))
-#     conn.commit()
-#     cur.close()
-#     conn.close()
-
-#     return jsonify({'message': 'User registered successfully'}), 201
-
+def generate_unique_filename_png(directory):
+    while True:
+            # Generate a random UUID and convert it to a string
+        random_name = str(uuid.uuid4())
+            # Append the current timestamp to the UUID
+        file_name = f'{random_name}_{int(time.time())}'
+        #     # Create the full file path
+        file_path = os.path.join(directory, f'{file_name}.png')
+            # Check if the file already exists
+        if not os.path.exists(file_path):
+            return file_name
 
 @app.route('/SignUp', methods=['POST'])
-def signup():
+def handle_signup():
         # Extract the customer details from the request data
     name = request.json["name"]
     email = request.json["email"]
@@ -585,13 +563,16 @@ def signup():
         if image.format != 'PNG':
             image = image.convert('RGBA')
 
+            # this, returs a string that combined wiht current time stamp  
+        unique_filename = generate_unique_filename_png('static/customer_img')
+
             # Save image to folder
-        image_path = os.path.join('static/customer_img', f'{phone}.png')
+        image_path = os.path.join('static/customer_img', f'{unique_filename}.png')
         image.save(image_path)
 
             # Insert the new customer into the database with the image path
         cur.execute('''
-            INSERT INTO customers (name, email, phone_number, registration_date, image) VALUES (?, ?, ?, DATETIME('now'), ?)''', (name, email, phone, f'{phone}.png'))
+            INSERT INTO customers (name, email, phone_number, registration_date, image) VALUES (?, ?, ?, DATETIME('now'), ?)''', (name, email, phone, f'{unique_filename}.png'))
     else:
             # Insert the new customer into the database without the image path
         cur.execute('''
