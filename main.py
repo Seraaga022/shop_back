@@ -6,11 +6,12 @@ import sqlite3
 import json
 import logging
 import base64
-
+from PIL import Image
+import os
+import io
 
 app = Flask(__name__)
 CORS(app)
-cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 logging.basicConfig(level=logging.INFO)
 # app.config['SECRET_KEY'] = 'its my very secret password that no one supposed to know'
@@ -27,18 +28,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-
-# (name, description, price, category_id, image)
-# product = ('mobileN', 'its the NntMobile', 100, 1, '1.png')
-# def add_one_product(thing):
-#     try:
-#         # 5 column
-#         c.execute('''INSERT INTO products (name, description, price, category_id, image) VALUES 
-#                  (?,?,?,?,?)''', thing)
-#         conn.commit()
-#     except sqlite3.Error as e:
-#         print(f"An error occurred: {e}")
-# add_one_product(product)
 
 
 # name, description, parent_category_id, created_at
@@ -139,12 +128,15 @@ def get_customer(customer_id):
     cur = conn.cursor()
     cur.execute('SELECT * FROM customers WHERE customer_id = ?', (customer_id,))
     customer = cur.fetchone()
+    with open(f'static/customer_img/{customer[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
     final_customer = {
             "customer_id": customer[0],
             "name": customer[1],
             "email": customer[2],
             "phone_number": customer[3],
             "registration_date": customer[4],
+            "image": encoded_string,
         }
     conn.close()
     return final_customer
@@ -402,12 +394,15 @@ def list_customer():
     # Convert the database records to a list of dictionaries for the response
     final_customers = []
     for customer in customers:
+        with open(f'static/customer_img/{customer[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
         final_customers.append({
             "customer_id": customer[0],
             "name": customer[1],
             "email": customer[2],
             "phone": customer[3],
             "registration_date": customer[4],
+            "image": encoded_string,
         })
 
     total_count = len(DATABASE.GET_ALL_CUSTOMERS)
@@ -505,40 +500,108 @@ def user_exists(phone, username):
     cur.close()
     conn.close()
         # If a result is found, the user exists; otherwise, they do not
-    return result is not None
+    return result
 
 @app.route('/Login', methods = ['POST'])
 def handle_login():
     name = request.json["name"]
     phone = request.json["phone"]
-    if user_exists(phone, name):
-        return jsonify({'message': 'User exists'}), 201
+    customer = user_exists(phone, name)
+    if customer:
+        with open(f'static/customer_img/{customer[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        return jsonify({
+            'message': 'User exists',
+            'id': customer[0],
+            'name': customer[1],
+            'email': customer[2],
+            'phone': customer[3],
+            'date': customer[4],
+            'image': encoded_string,
+        }), 200
     else:
         return jsonify({'message': 'User does not exist'}), 400
 
+
+# @app.route('/SignUp', methods=['POST'])
+# def signup():
+#         # Get the data from the request
+#     data = request.get_json()
+#         # Extract the customer details from the request data
+#     name = request.json["name"]
+#     email = request.json["email"]
+#     phone = request.json["phone"]
+#     base64_image = request.json["image"]
+
+#     if user_exists(phone, name):
+#         return jsonify({'message': 'User already exists'}), 400
+
+#         # Decode base64 image
+#     if base64_image:
+#         image_data = base64.b64decode(base64_image.split(',')[1])
+#         image = Image.open(io.BytesIO(image_data))
+
+#             # Convert to PNG if not already
+#         if image.format != 'PNG':
+#             image = image.convert('RGBA')
+
+#             # Save image to folder
+#         image_path = os.path.join('static/customer_img', f'{phone}.png')
+#         image.save(image_path)
+
+#         # Insert the new customer into the database
+#     conn = get_db_connection()
+#     cur = conn.cursor()
+#     cur.execute('''
+#         INSERT INTO customers (name, email, phone_number, registration_date, image) VALUES (?, ?, ?, DATETIME('now'), ?)''', (name, email, phone, f'{phone}.png'))
+#     conn.commit()
+#     cur.close()
+#     conn.close()
+
+#     return jsonify({'message': 'User registered successfully'}), 201
+
+
 @app.route('/SignUp', methods=['POST'])
 def signup():
-        # Get the data from the request
-    data = request.get_json()
         # Extract the customer details from the request data
-    name = data.get('name')
-    email = data.get('email')
-    phone = data.get('phone')
+    name = request.json["name"]
+    email = request.json["email"]
+    phone = request.json["phone"]
+    base64_image = request.json.get("image") # Use .get() to avoid KeyError if "image" is not provided
+
+        # Establish connection
+    conn = get_db_connection()
+    cur = conn.cursor()
 
     if user_exists(phone, name):
         return jsonify({'message': 'User already exists'}), 400
 
-        # Insert the new customer into the database
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO customers (name, email, phone_number, registration_date) VALUES (?, ?, ?, DATETIME('now'))''', (name, email, phone))
+        # Decode base64 image
+    if base64_image:
+        image_data = base64.b64decode(base64_image.split(',')[1])
+        image = Image.open(io.BytesIO(image_data))
+
+            # Convert to PNG if not already
+        if image.format != 'PNG':
+            image = image.convert('RGBA')
+
+            # Save image to folder
+        image_path = os.path.join('static/customer_img', f'{phone}.png')
+        image.save(image_path)
+
+            # Insert the new customer into the database with the image path
+        cur.execute('''
+            INSERT INTO customers (name, email, phone_number, registration_date, image) VALUES (?, ?, ?, DATETIME('now'), ?)''', (name, email, phone, f'{phone}.png'))
+    else:
+            # Insert the new customer into the database without the image path
+        cur.execute('''
+            INSERT INTO customers (name, email, phone_number, registration_date) VALUES (?, ?, ?, DATETIME('now'))''', (name, email, phone))
+
     conn.commit()
     cur.close()
     conn.close()
 
     return jsonify({'message': 'User registered successfully'}), 201
-
 
 @app.route('/cart', methods=['POST'])
 def handle_Add_to_cart():
