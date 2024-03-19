@@ -223,7 +223,7 @@ def update_product(product_id, name, description, price, category_id, image):
     cur.execute('UPDATE products SET name = ?, description = ?, price = ?, image = ? WHERE product_id = ?', (name, description, price, category_id, image))
     conn.commit()
     conn.close()
-    return get_product(product_id)
+    # return get_product(product_id)
 
 # Delete a product
 def delete_product(product_id):
@@ -454,7 +454,7 @@ def add_product():
     category_id = request.json['category_id']
     image = request.json['image']
     product_id = create_customer(name, description, price, category_id, image)
-    return jsonify(get_product(product_id)), 201
+    # return jsonify(get_product(product_id)), 201
 
 @app.route('/product/<int:product_id>', methods=['GET'])
 def get_product_by_id(product_id):
@@ -623,20 +623,21 @@ def get_Shopping_cart_items_by_user_id(C_ID):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''SELECT 
+                cart.cart_id,
                 cart.quantity, 
                 cart.created_at, 
                 cart.updated_at, 
                 products.product_id, 
                 products.name, 
                 products.price, 
-                products.image 
+                products.image
             FROM cart 
             JOIN products ON cart.product_id = products.product_id 
             WHERE cart.customer_id = ?''', (customer_id,))
     CARTS = cur.fetchall()
     for cart in CARTS:
-        try:
-            with open(f'static/product_images/{cart[6]}', 'rb') as image_file:
+        try: 
+            with open(f'static/product_images/{cart[7]}', 'rb') as image_file:
                 encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
         except FileNotFoundError:
             # Handle the case where the image file is not found
@@ -647,12 +648,13 @@ def get_Shopping_cart_items_by_user_id(C_ID):
             encoded_string = None
         
         cart_items = {
-            "quantity": cart[0],
-            "created_at": cart[1],
-            "updated_at": cart[2],
-            "product_id": cart[3],
-            "product_name": cart[4],
-            "product_price": cart[5],
+            "cart_id": cart[0],
+            "quantity": cart[1],
+            "created_at": cart[2],
+            "updated_at": cart[3],
+            "product_id": cart[4],
+            "product_name": cart[5],
+            "product_price": cart[6],
             "product_image": encoded_string,
         }
         final_cate.append(cart_items)
@@ -661,6 +663,44 @@ def get_Shopping_cart_items_by_user_id(C_ID):
     conn.close()
 
     return jsonify(final_cate), 200
+
+
+@app.route('/cart', methods=['PUT'])
+def update_product_quantity():
+    cart_id = request.json["cartId"]
+    new_quantity =  request.json["quantity"]
+
+    if not cart_id:
+        return jsonify({"error": "itemId is required"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Update the quantity of the cart item
+    try:
+        if new_quantity == 0:
+            # If the new quantity is 0, delete the record
+            cur.execute('DELETE FROM cart WHERE cart_id = ?', (cart_id,))
+            conn.commit()
+            return jsonify({"message": "Item removed from cart"}), 200
+        else:
+            cur.execute('''
+            UPDATE cart
+            SET quantity = ?
+            WHERE cart_id = ?''', (new_quantity, cart_id))
+            conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+    return jsonify({"message": "Cart item quantity updated"}), 200
+
+
+
+
 
 
 @app.errorhandler(404)
