@@ -584,23 +584,83 @@ def handle_signup():
 
     return jsonify({'message': 'User registered successfully'}), 201
 
+
 @app.route('/cart', methods=['POST'])
 def handle_Add_to_cart():
     product_id = request.json["product_id"]
     quantity = request.json["quantity"]
     customer_id = request.json["customer_id"]
 
-    # Insert the data into the database
     conn = get_db_connection()
     cur = conn.cursor()
+
     cur.execute('''
-        INSERT INTO cart (customer_id, product_id, quantity, updated_at)
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP)''', (customer_id, product_id, quantity))
+    SELECT * FROM cart WHERE customer_id = ? AND product_id = ?''', (customer_id, product_id))
+    existing_cart_item = cur.fetchone()
+
+    if existing_cart_item:
+        cur.execute('''
+            UPDATE cart
+            SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP
+            WHERE customer_id = ? AND product_id = ?''', (quantity, customer_id, product_id))
+    else:
+        cur.execute('''
+            INSERT INTO cart (customer_id, product_id, quantity, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)''', (customer_id, product_id, quantity))
 
     conn.commit()
+
     return jsonify({'message': 'Item added to cart'}), 200
 
 
+@app.route('/cart/<int:C_ID>', methods=['GET'])
+def get_Shopping_cart_items_by_user_id(C_ID):
+    customer_id = C_ID
+    if not customer_id:
+        return jsonify({"error": "C_ID is required"}), 400
+
+    final_cate = []
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''SELECT 
+                cart.quantity, 
+                cart.created_at, 
+                cart.updated_at, 
+                products.product_id, 
+                products.name, 
+                products.price, 
+                products.image 
+            FROM cart 
+            JOIN products ON cart.product_id = products.product_id 
+            WHERE cart.customer_id = ?''', (customer_id,))
+    CARTS = cur.fetchall()
+    for cart in CARTS:
+        try:
+            with open(f'static/product_images/{cart[6]}', 'rb') as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        except FileNotFoundError:
+            # Handle the case where the image file is not found
+            encoded_string = None
+        except Exception as e:
+            # Handle other exceptions
+            print(f"Error opening image file: {e}")
+            encoded_string = None
+        
+        cart_items = {
+            "quantity": cart[0],
+            "created_at": cart[1],
+            "updated_at": cart[2],
+            "product_id": cart[3],
+            "product_name": cart[4],
+            "product_price": cart[5],
+            "product_image": encoded_string,
+        }
+        final_cate.append(cart_items)
+
+    cur.close()
+    conn.close()
+
+    return jsonify(final_cate), 200
 
 
 @app.errorhandler(404)
