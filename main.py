@@ -19,16 +19,8 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 logging.basicConfig(level=logging.INFO)
 # app.config['SECRET_KEY'] = 'its my very secret password that no one supposed to know'
 # logging.getLogger('flask_cors').level = logging.DEBUG
-
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/DATAbase.db'
 # db = SQLAlchemy(app)
-
-
-
-
-
-
-
 
 
 
@@ -44,7 +36,7 @@ logging.basicConfig(level=logging.INFO)
 # add_one_category()
 
 
-@app.route('/Pcategories')
+@app.route('/Pcategories', methods=["GET"])
 def get_parent_categories():
     category_list = []
     for category in DATABASE.GET_PARENT_CATEGORIES:
@@ -63,23 +55,50 @@ def get_parent_categories():
     return jsonify(category_list), 200
 
 
-@app.route('/Acategories')
-def get_all_categories():
+@app.route('/category/<int:parent_id>', methods=["GET"])
+def get_category_with_this_parentID(parent_id):
     category_list = []
-    for category in DATABASE.GET_ALL_CATEGORIES:
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''SELECT * FROM categories
+                   WHERE categories.parent_category_id = ?''', (parent_id,))
+    categories = cur.fetchall()
+    for category in categories:
         with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
 
-        category_dict = {
+        category_list.append({
             "category_id": category[0],
             "name": category[1],
             "description": category[2],
             "parent_category_id": category[3],
             "created_at": category[4],
             "image": encoded_string,
-        }
-        category_list.append(category_dict)
+        })
+
+    print(f"the number of categories found by this => '{parent_id}' category id is = {len(category_list)} ")
     return jsonify(category_list), 200
+
+
+@app.route('/subCategory/<int:sub_cat_id>', methods=["GET"])
+def get_sub_category_id(sub_cat_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    finall_products = []
+    cur.execute(f''' SELECT * FROM products WHERE category_id = {sub_cat_id} ''')
+    products = cur.fetchall()
+    for product in products:
+        with open(f'static/product_images/{product[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        finall_products.append({
+            "id": product[0],
+            "name": product[1],
+            "description": product[2],
+            "price": product[3],
+            "category_id": product[4],
+            "image": encoded_string
+        })
+    return jsonify(finall_products), 200
 
 
 @app.route('/products', methods=['GET'])
