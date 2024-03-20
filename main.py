@@ -36,6 +36,34 @@ logging.basicConfig(level=logging.INFO)
 # add_one_category()
 
 
+@app.route('/COI/<int:id>', methods=["GET"])
+def Check_out_info(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    finall = []
+    quantity = 0
+    total_price = 0
+    cur.execute('''SELECT *, COUNT(products.price) AS price FROM cart 
+                     JOIN products
+                     ON products.product_id = cart.product_id
+                     WHERE customer_id = ?
+                     GROUP BY cart.cart_id
+                ''', (id,)) # Use parameterized query
+    items = cur.fetchall()
+    for item in items:
+        quantity += item["quantity"] # Assuming this is the quantity column
+        total_price += item["price"] * item["quantity"] # Multiply price by quantity and add to total_price
+        finall.append({
+            "cart_id": item["cart_id"],
+            "customer_id": item["customer_id"],
+            "product_id": item["product_id"],
+            "created_at": item["created_at"],
+            "updated_at": item["updated_at"],
+            "product_price": item["price"],
+        })
+    return jsonify({"items": finall, "quantity": quantity, "item_count": len(items), "total_price": total_price}), 200
+
+
 @app.route('/Pcategories', methods=["GET"])
 def get_parent_categories():
     category_list = []

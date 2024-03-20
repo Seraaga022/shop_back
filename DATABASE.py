@@ -15,7 +15,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS customers
 
 # create products table
 c.execute('''CREATE TABLE IF NOT EXISTS products
-             (product_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             (product_id INTEGER PRIMARY KEY AUTOINCREMENT,
               name VARCHAR(100) NOT NULL, 
               description TEXT NOT NULL, 
               price DECIMAL(10,2) NOT NULL, 
@@ -26,7 +26,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS products
 c.execute('''CREATE TABLE IF NOT EXISTS orders
              (order_id INTEGER PRIMARY KEY AUTOINCREMENT, 
               customer_id INT NOT NULL, 
-              order_date DATETIME NOT NULL, 
+              order_date DATETIME NOT NULL,
               total_amount DECIMAL(10,2) NOT NULL, 
               status VARCHAR(20) NOT NULL)''')
 
