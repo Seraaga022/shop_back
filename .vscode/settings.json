@@ -1,0 +1,7 @@
+{
+    "editor.quickSuggestions": {
+        "other": "off"
+    },
+    "editor.wordBasedSuggestions": "matchingDocuments",
+    "editor.suggest.showClasses": true
+}

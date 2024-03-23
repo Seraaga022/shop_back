@@ -6,7 +6,7 @@ c = conn.cursor()
 
 # create customers table
 c.execute('''CREATE TABLE IF NOT EXISTS customers
-             (customer_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, 
               name VARCHAR(50) NOT NULL, 
               email VARCHAR(100) NOT NULL UNIQUE, 
               phone_number VARCHAR(15) NOT NULL UNIQUE, 
@@ -26,25 +26,25 @@ c.execute('''CREATE TABLE IF NOT EXISTS products
 c.execute('''CREATE TABLE IF NOT EXISTS orders
              (order_id INTEGER PRIMARY KEY AUTOINCREMENT, 
               customer_id INT NOT NULL, 
-              order_date DATETIME NOT NULL,
+              order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
               total_amount DECIMAL(10,2) NOT NULL, 
               status VARCHAR(20) NOT NULL)''')
 
 # create orderDetails table
 c.execute('''CREATE TABLE IF NOT EXISTS orderDetails
              (order_detail_id INTEGER PRIMARY KEY AUTOINCREMENT, 
-              order_id INT NOT NULL, 
+              order_id INT NOT NULL,
               product_id INT NOT NULL, 
-              quantity INT NOT NULL, 
+              quantity INT NOT NULL,
               unit_price DECIMAL(10,2) NOT NULL)''')
 
 # create categories table
 c.execute('''CREATE TABLE IF NOT EXISTS categories
-             (category_id INTEGER PRIMARY KEY AUTOINCREMENT, 
-              name VARCHAR(50) NOT NULL, 
-              description TEXT NOT NULL, 
-              parent_category_id INT, 
-              created_at DATETIME NOT NULL,
+             (id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name VARCHAR(50) NOT NULL,
+              description TEXT NOT NULL,
+              parent_category_id INT,
+              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
               image TEXT NOT NULL)''')
 
 # create users table
@@ -176,6 +176,8 @@ c.execute("SELECT * FROM orders")
 GET_ALL_ORDERS = c.fetchall()
 c.execute("SELECT * FROM orderDetails")
 GET_ALL_ORDERDETAILS = c.fetchall()
+c.execute("SELECT * FROM categories")
+GET_ALL_CATEGORIES = c.fetchall()
 c.execute("SELECT * FROM categories where parent_category_id IS NULL")
 GET_PARENT_CATEGORIES = c.fetchall()
 c.execute("SELECT * FROM cart")

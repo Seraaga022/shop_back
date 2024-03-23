@@ -36,6 +36,43 @@ logging.basicConfig(level=logging.INFO)
 # add_one_category()
 
 
+def get_items_quantity_totalCount_totalPrice_customerId(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    finall = []
+    quantity = 0
+    total_price = 0
+    cur.execute('''SELECT *, COUNT(products.price) AS price FROM cart 
+                     JOIN products
+                     ON products.product_id = cart.product_id
+                     WHERE customer_id = ?
+                     GROUP BY cart.cart_id
+                ''', (id,)) # Use parameterized query
+    items = cur.fetchall()
+    for item in items:
+        quantity += item["quantity"] # Assuming this is the quantity column
+        total_price += item["price"] * item["quantity"] # Multiply price by quantity and add to total_price
+        finall.append({
+            "cart_id": item["cart_id"],
+            "customer_id": item["customer_id"],
+            "product_id": item["product_id"],
+            "created_at": item["created_at"],
+            "updated_at": item["updated_at"],
+            "product_price": item["price"],
+            "quantity": item["quantity"],
+            "product_price": item["price"]
+        })
+
+    return jsonify({"items": finall, "quantity": quantity, "item_count": len(items), "total_price": total_price})
+# usage
+# items = response.get_json()["items"]
+# for item in items:
+#     cart_id = item["cart_id"]
+# quantity = response.get_json()["quantity"]
+# item_count = response.get_json()["item_count"]
+# total_price = response.get_json()["total_price"]
+
+
 @app.route('/COI/<int:id>', methods=["GET"])
 def Check_out_info(id):
     conn = get_db_connection()
@@ -83,7 +120,7 @@ def get_parent_categories():
     return jsonify(category_list), 200
 
 
-@app.route('/category/<int:parent_id>', methods=["GET"])
+@app.route('/ALLcategory/<int:parent_id>', methods=["GET"])
 def get_category_with_this_parentID(parent_id):
     category_list = []
     conn = get_db_connection()
@@ -113,7 +150,7 @@ def get_sub_category_id(sub_cat_id):
     conn = get_db_connection()
     cur = conn.cursor()
     finall_products = []
-    cur.execute(f''' SELECT * FROM products WHERE category_id = {sub_cat_id} ''')
+    cur.execute(f''' SELECT * FROM products WHERE id = {sub_cat_id} ''')
     products = cur.fetchall()
     for product in products:
         with open(f'static/product_images/{product[5]}', 'rb') as image_file:
@@ -166,9 +203,10 @@ def get_db_connection():
 def create_customer(name, email, phone):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(f"INSERT INTO customers (name, email, phone_number, registration_date) VALUES ({name}, {email}, {phone}, DATETIME('now'))")
+    cur.execute(f"INSERT INTO customers (name, email, phone_number, registration_date) VALUES (?, ?, ?, DATETIME('now'))", (name, email, phone,))
     conn.commit()
-    customer_id = cur.lastrowid
+    cur.execute(''' SELECT id from customers order by id DESC LIMIT 1 ''')
+    customer_id = cur.fetchone()[0]
     conn.close()
     return customer_id
 
@@ -176,12 +214,12 @@ def create_customer(name, email, phone):
 def get_customer(customer_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM customers WHERE customer_id = ?', (customer_id,))
+    cur.execute('SELECT * FROM customers WHERE id = ?', (customer_id,))
     customer = cur.fetchone()
     with open(f'static/customer_img/{customer[5]}', 'rb') as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
     final_customer = {
-            "customer_id": customer[0],
+            "id": customer[0],
             "name": customer[1],
             "email": customer[2],
             "phone_number": customer[3],
@@ -195,7 +233,7 @@ def get_customer(customer_id):
 def update_customer(customer_id, name, email, phone):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE customers SET name = ?, email = ?, phone_number = ? WHERE customer_id = ?', (name, email, phone, customer_id))
+    cur.execute('UPDATE customers SET name = ?, email = ?, phone_number = ? WHERE id = ?', (name, email, phone, customer_id))
     conn.commit()
     conn.close()
     return get_customer(customer_id)
@@ -204,29 +242,61 @@ def update_customer(customer_id, name, email, phone):
 def delete_customer(customer_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('DELETE FROM customers WHERE customer_id = ?', (customer_id,))
+    cur.execute('DELETE FROM customers WHERE id = ?', (customer_id,))
     conn.commit()
     conn.close()
 
-# # Get all customers
-# def get_all_customers(RngStart, RngEnd):
-# # def get_all_customers():
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-#     cur.execute(f'SELECT * FROM customers LIMIT {RngEnd - RngStart + 1} OFFSET {RngStart}')
-#     # cur.execute(f'SELECT * FROM customers LIMIT {limit}')
-#     customers = cur.fetchall()
-#     final_customers = []
-#     for customer in customers:
-#         final_customers.append({
-#             "customer_id": customer[0],
-#             "name": customer[1],
-#             "email": customer[2],
-#             "phone": customer[3],
-#             "registration_date": customer[4],
-#         })
-#     conn.close()
-#     return final_customers
+    
+    
+    
+    
+# CATEGORY
+# Create a new category
+def create_category(name, description, parent_category_id, image):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(f"INSERT INTO categories (name, description, parent_category_id, image) VALUES (?, ?, ?, ?)", (name, description, parent_category_id, image,))
+    conn.commit()
+    cur.execute(''' SELECT id from categories order by id DESC LIMIT 1 ''')
+    category_id = cur.fetchone()[0]
+    conn.close()
+    return category_id
+
+# Get a category by ID
+def get_category(category_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM categories WHERE id = ?', (category_id,))
+    category = cur.fetchone()
+    with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+    final_category = {
+            "id": category[0],
+            "name": category[1],
+            "description": category[2],
+            "PCI": category[3],
+            # "created_at": category[4],
+            "image": encoded_string,
+        }
+    conn.close()
+    return final_category
+
+# Update a category
+def update_category(name, description, parent_category_id, image, category_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('UPDATE categories SET name = ?, description = ?, parent_category_id = ?, image = ? WHERE id = ?', (name, description, parent_category_id, image, category_id,))
+    conn.commit()
+    conn.close()
+    return get_category(category_id)
+
+# Delete a category
+def delete_category(category_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM categories WHERE id = ?', (category_id,))
+    conn.commit()
+    conn.close()
 
 
 
@@ -238,7 +308,8 @@ def create_product(name, description, price, category_id, image):
     cur = conn.cursor()
     cur.execute("INSERT INTO products (name, description, price, category_id, image) VALUES (?, ?, ?, ?, ?)", (name, description, price, category_id, image))
     conn.commit()
-    product_id = cur.lastrowid
+    cur.execute(''' SELECT product_id FROM products ORDER BY product_id DESC LIMIT 1 ''')
+    product_id = cur.fetchone()[0]
     conn.close()
     return product_id
 
@@ -267,7 +338,7 @@ def create_product(name, description, price, category_id, image):
 def update_product(product_id, name, description, price, category_id, image):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE products SET name = ?, description = ?, price = ?, image = ? WHERE product_id = ?', (name, description, price, category_id, image))
+    cur.execute('UPDATE products SET name = ?, description = ?, price = ?, category_id = ?, image = ? WHERE product_id = ?', (name, description, price, category_id, image, product_id))
     conn.commit()
     conn.close()
     # return get_product(product_id)
@@ -313,22 +384,24 @@ def test_backEnd():
     return jsonify('ok')
 
 
-@app.route('/category/<int:id>')
-def get_category_by_id(id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(f"SELECT * from categories where category_id = ?", (id,))
-    category = cur.fetchone()
-    final_cate = {
-        "category_id": category[0],
-        "name": category[1],
-        "description": category[2],
-        "parent_category_id": category[3],
-        "created_at": category[4],
-        "image": category[5],
-    }
-    conn.close()
-    return jsonify(final_cate), 200
+# @app.route('/category/<int:id>')
+# def get_category_by_id(id):
+#     conn = get_db_connection()
+#     cur = conn.cursor()
+#     cur.execute(f"SELECT * from categories where id = ?", (id,))
+#     category = cur.fetchone()
+#     final_cate = {
+#         "category_id": category[0],
+#         "name": category[1],
+#         "description": category[2],
+#         "parent_category_id": category[3],
+#         "created_at": category[4],
+#         "image": category[5],
+#     }
+#     conn.close()
+#     return jsonify(final_cate), 200
+
+
 
 
 # CUSTOMER
@@ -389,7 +462,7 @@ def get_category_by_id(id):
 #     # Return the customers as JSON
 #     return jsonify(final_customers), 200
 
-# its working completely with range and sort and filter
+
 @app.route('/customer', methods=['GET'])
 def list_customer():
     logging.debug("Received 'GET' request for /customer")
@@ -404,31 +477,23 @@ def list_customer():
     order = 'ASC' # Default sort order
     filters = {} # Default empty filter
     
-    # Parse range if provided
     if range_str:
         range_list = json.loads(range_str)
         start = range_list[0]
         end = range_list[1]
     
-    # Parse sort if provided
     if sort_str:
         sort_list = json.loads(sort_str)
         field = sort_list[0]
         order = sort_list[1]
     
-    # Parse filter if provided
     if filter_str:
         filters = json.loads(filter_str)
     
-    # Establish a database connection and cursor if not already done
     conn = sqlite3.connect('db/DATAbase.db')
     cur = conn.cursor()
 
-    # Adjust your database query to use LIMIT, OFFSET, ORDER BY, and WHERE based on start, end, field, order, and filters
-    # For example, if you're using SQLite, your query might look like this:
-    # Note: This is a simplified example. The actual implementation will depend on your database and ORM.
-    # Also, ensure to validate the field, order, and filters against a list of allowed values to prevent SQL injection.
-    query = f'SELECT * FROM customers ORDER BY customer_{field} {order} LIMIT ? OFFSET ?'
+    query = f'SELECT * FROM customers ORDER BY {field} {order} LIMIT ? OFFSET ?'
     params = (end - start + 1, start)
     
     # Apply filters to the query
@@ -447,7 +512,7 @@ def list_customer():
         with open(f'static/customer_img/{customer[5]}', 'rb') as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
         final_customers.append({
-            "customer_id": customer[0],
+            "id": customer[0],
             "name": customer[1],
             "email": customer[2],
             "phone": customer[3],
@@ -456,40 +521,202 @@ def list_customer():
         })
 
     total_count = len(DATABASE.GET_ALL_CUSTOMERS)
-    # Return the customers as JSON
     response = jsonify(final_customers)
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] = f'customers 0-{len(final_customers)}/{total_count}'
     return response, 200
 
+
 @app.route('/customer', methods=['POST'])
 def add_customer():
     name = request.json['name']
-    email = request.json['email']
     phone = request.json['phone']
+    email = request.json['email']
     customer_id = create_customer(name, email, phone)
     return jsonify(get_customer(customer_id)), 201
 
-@app.route('/customer/<int:customer_id>', methods=['GET'])
-def get_customer_by_id(customer_id):
-    customer = get_customer(customer_id)
+
+@app.route('/customer/<id>', methods=['GET'])
+def get_customer_by_id(id):
+    customer = get_customer(id)
     if customer is None:
         return '', 404
     return jsonify(customer), 200
 
-@app.route('/customer/<int:customer_id>', methods=['PUT'])
-def update_customer_by_id(customer_id):
+
+@app.route('/customer/<int:id>', methods=['PUT'])
+def update_customer_by_id(id):
     name = request.json['name']
     email = request.json['email']
     phone = request.json['phone']
-    updated = update_customer(customer_id, name, email, phone)
+    updated = update_customer(id, name, email, phone)
     return jsonify(updated), 200
 
-@app.route('/customer/<int:customer_id>', methods=['DELETE'])
-def delete_customer_by_id(customer_id):
-    delete_customer(customer_id)
-    return jsonify({"customer_id":customer_id}), 200
+
+@app.route('/customer/<int:id>', methods=['DELETE'])
+def delete_customer_by_id(id):
+    delete_customer(id)
+    return jsonify({"customer_id":id}), 200
     
+
+
+
+# category
+@app.route('/category', methods=['GET'])
+def list_category():
+    logging.debug("Received 'GET' request for /category")
+    range_str = request.args.get('range')
+    sort_str = request.args.get('sort')
+    filter_str = request.args.get('filter')
+    
+    # Initialize variables for pagination, sorting, and filtering
+    start = 0
+    end = 10 # Default end value, adjust as needed
+    field = 'id' # Default sort field
+    order = 'ASC' # Default sort order
+    filters = {} # Default empty filter
+    
+    if range_str:
+        range_list = json.loads(range_str)
+        start = range_list[0]
+        end = range_list[1]
+    
+    if sort_str:
+        sort_list = json.loads(sort_str)
+        field = sort_list[0]
+        order = sort_list[1]
+    
+    if filter_str:
+        filters = json.loads(filter_str)
+    
+    conn = sqlite3.connect('db/DATAbase.db')
+    cur = conn.cursor()
+
+    # Construct the query based on the field
+    if field == 'PCI':
+        query = f'SELECT * FROM categories ORDER BY parent_category_id {order} LIMIT ? OFFSET ?'
+    else:
+        query = f'SELECT * FROM categories ORDER BY {field} {order} LIMIT ? OFFSET ?'
+    
+    params = [end - start + 1, start]
+    
+    # Apply filters to the query
+    for key, value in filters.items():
+        query += f' AND {key} = ?'
+        params += (value)
+    
+    try:
+        cur.execute(query, params)
+    except Exception as e:
+        logging.error(f"Error executing query: {e}")
+        return jsonify({"error": "An error occurred while processing the request"}), 500
+
+    cur.execute(query, params)
+    
+    # Fetch the customers from the database
+    categories = cur.fetchall()
+    
+    # Convert the database records to a list of dictionaries for the response
+    final_categories = []
+    for category in categories:
+        with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        final_categories.append({
+            "id": category[0],
+            "name": category[1],
+            "description": category[2],
+            "parent_category_id": category[3],
+            "created_at": category[4],
+            "image": encoded_string,
+        })
+
+    total_count = len(DATABASE.GET_ALL_CATEGORIES)
+    # total_count = 123
+    response = jsonify(final_categories)
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] = f'customers 0-{len(final_categories)}/{total_count}'
+    return response, 200
+
+# (name, description, parent_category_id, image, category_id)
+
+@app.route('/category', methods=['POST'])
+def add_category():
+    name = request.json['name']
+    description = request.json['description']
+    parent_category_id = request.json['PCI']
+    base64_image = request.json['image']
+
+    image_data = base64.b64decode(base64_image.split(',')[1])
+    image = Image.open(io.BytesIO(image_data))
+
+        # Convert to PNG if not already
+    if image.format != 'PNG':
+        image = image.convert('RGBA')
+
+        # Save image to folder
+    image_path = os.path.join('static/category_symbol', f'{name}.png')
+    image.save(image_path)
+
+    category_id = create_category(name, description, parent_category_id, image, category_id)
+    return jsonify(get_category(category_id)), 201
+
+
+@app.route('/category/<int:id>', methods=['GET'])
+def get_category_by_id(id):
+    category = get_category(id)
+    if category is None:
+        return '', 404
+    return jsonify(category), 200
+
+
+@app.route('/category/<int:id>', methods=['PUT'])
+def update_category_by_id(id):
+    name = request.json['name']
+    description = request.json['description']
+    parent_category_id = request.json['PCI']
+    base64_image = request.json['image']
+
+    # Check if the base64_image string is in the expected format
+    if ',' in base64_image:
+        # Split the base64 string and decode the second part (the actual image data)
+        try:
+            image_data = base64.b64decode(base64_image.split(',')[1])
+        except IndexError:
+            # Handle the case where the base64_image string does not contain a comma
+            # or the split operation fails for some reason
+            return jsonify({"error": "Invalid image format"}), 400
+    else:
+        # If the base64_image string does not contain a comma,
+        # try to decode it directly (assuming it's a raw base64 string without a data URI scheme)
+        try:
+            image_data = base64.b64decode(base64_image)
+        except base64.binascii.Error:
+            # Handle the case where the base64_image string is not valid base64
+            return jsonify({"error": "Invalid base64 image data"}), 400
+
+    image = Image.open(io.BytesIO(image_data))
+
+    # Convert to PNG if not already
+    if image.format != 'PNG':
+        image = image.convert('RGBA')
+
+    # Save image to folder
+    image_path = os.path.join('static/category_symbol', f'{name}.png')
+    image.save(image_path)
+
+    # Assuming update_category function is defined elsewhere
+    updated = update_category(name, description, parent_category_id, f'{name}.png', id)
+    return jsonify(updated), 200
+
+
+@app.route('/category/<int:id>', methods=['DELETE'])
+def delete_category_by_id(id):
+    delete_category(id)
+    return jsonify({"category_id":id}), 200
+  
+
+
+
 
 
 # PRODUCT
@@ -662,8 +889,8 @@ def handle_Add_to_cart():
 
 @app.route('/cart/<int:C_ID>', methods=['GET'])
 def get_Shopping_cart_items_by_user_id(C_ID):
-    customer_id = C_ID
-    if not customer_id:
+    cart_id = C_ID
+    if not cart_id:
         return jsonify({"error": "C_ID is required"}), 400
 
     final_cate = []
@@ -680,7 +907,7 @@ def get_Shopping_cart_items_by_user_id(C_ID):
                 products.image
             FROM cart 
             JOIN products ON cart.product_id = products.product_id 
-            WHERE cart.customer_id = ?''', (customer_id,))
+            WHERE cart.customer_id = ?''', (cart_id,))
     CARTS = cur.fetchall()
     for cart in CARTS:
         try: 
@@ -744,6 +971,84 @@ def update_product_quantity():
         conn.close()
 
     return jsonify({"message": "Cart item quantity updated"}), 200
+
+# check out order shipping feedback
+@app.route('/COOSF', methods=["POST"])
+def check_out_add_order():
+    customer_id = request.json["customerId"]
+    reciepient_name = request.json["customerName"]
+    status = request.json["status"]
+    address_lineOne = request.json["addressLineOne"]
+    address_lineTwo = request.json.get("addressLineTwo")
+    city = request.json["city"]
+    state = request.json["state"]
+    postal_code = request.json["postalCode"]
+    country = request.json["country"]
+    rating = request.json.get("rating")
+    comment = request.json.get("comment")
+    response = get_items_quantity_totalCount_totalPrice_customerId(customer_id)
+    items = response.get_json()["items"]
+    total_amount = response.get_json()["total_price"]
+
+
+
+
+    # conn = get_db_connection()
+    # cur = conn.cursor()
+    # cur.execute(''' INSERT INTO orders (customer_id, total_amount, status) VALUES 
+    #                     (?, ?, ?) ''', (customer_id, total_amount, status,))                        
+    # conn.commit()
+    # cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
+    # order_id = cur.fetchone()[0]
+    # cur.close()    
+    # conn.close()
+
+
+
+    # conn = get_db_connection()
+    # cur = conn.cursor()
+    # for item in items:
+    #     cur.execute(''' INSERT INTO orderDetails (order_id, product_id, quantity, unit_price) VALUES 
+    #                         (?, ?, ?, ?)''', (order_id, 
+    #                                         item["product_id"], 
+    #                                         item["quantity"], 
+    #                                         item["product_price"],
+    #                                          ))
+    #     conn.commit()
+    # cur.close()
+    # conn.close()
+
+    # if address_lineTwo:
+    #     conn = get_db_connection()
+    #     cur = conn.cursor()
+    #     cur.execute(''' INSERT INTO shippingAddresses (customer_id, recipient_name, address_line1, address_line2, city, state, postal_code, county) VALUES 
+    #                 (?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, address_lineTwo, city, state, postal_code, country,))
+    #     conn.commit()
+    #     cur.close()
+    #     conn.close()
+    # else:
+    #     conn = get_db_connection()
+    #     cur = conn.cursor()
+    #     cur.execute(''' INSERT INTO shippingAddresses (customer_id, recipient_name, address_line1, city, state, postal_code, county) VALUES
+    #                 (?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, city, state, postal_code, country,))
+    #     conn.commit()
+    #     cur.close()
+    #     conn.close()
+    
+
+
+    # conn = get_db_connection()
+    # cur = conn.cursor()
+    # cur.execute(''' INSERT INTO feedbacks (customer_id, order_id, rating, comment) VALUES 
+    #             ( ?, ?, ?, ?) ''', (customer_id, order_id, rating, comment))
+    # conn.commit()
+    # cur.close()
+    # conn.close()
+    
+
+    return jsonify({"message": "ordered successfully"}), 200
+
+
 
 
 
