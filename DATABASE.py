@@ -10,7 +10,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS customers
               name VARCHAR(50) NOT NULL, 
               email VARCHAR(100) NOT NULL UNIQUE, 
               phone_number VARCHAR(15) NOT NULL UNIQUE, 
-              registration_date DATE NOT NULL,
+              registration_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
               image TEXT DEFAULT ('blank-img.png'))''')
 
 # create products table
@@ -26,6 +26,13 @@ c.execute('''CREATE TABLE IF NOT EXISTS products
 c.execute('''CREATE TABLE IF NOT EXISTS orders
              (order_id INTEGER PRIMARY KEY AUTOINCREMENT, 
               customer_id INT NOT NULL, 
+              recipient_name TEXT NOT NULL,
+              address_line1 TEXT NOT NULL,
+              address_line2 TEXT,
+              state TEXT NOT NULL,
+              country TEXT NOT NULL,
+              city TEXT NOT NULL,
+              postal_code VARCHAR(20) NOT NULL,
               order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
               total_amount DECIMAL(10,2) NOT NULL, 
               status VARCHAR(20) NOT NULL)''')
@@ -61,19 +68,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS payments
               order_id INT NOT NULL, 
               payment_method VARCHAR(50) NOT NULL, 
               amount DECIMAL(10,2) NOT NULL, 
-              payment_date DATETIME NOT NULL)''')
-
-# create shippingAddresses table
-c.execute('''CREATE TABLE IF NOT EXISTS shippingAddresses
-             (address_id INTEGER PRIMARY KEY AUTOINCREMENT, 
-              customer_id INT NOT NULL, 
-              recipient_name VARCHAR(100) NOT NULL, 
-              address_line1 VARCHAR(255) NOT NULL, 
-              address_line2 VARCHAR(255), 
-              city VARCHAR(100) NOT NULL, 
-              state VARCHAR(100) NOT NULL, 
-              postal_code VARCHAR(20) NOT NULL, 
-              county VARCHAR(100) NOT NULL)''')
+              payment_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
 # create feedbacks table
 c.execute('''CREATE TABLE IF NOT EXISTS feedbacks
@@ -82,54 +77,54 @@ c.execute('''CREATE TABLE IF NOT EXISTS feedbacks
               order_id INT NOT NULL, 
               rating INT NOT NULL, 
               comment TEXT NOT NULL, 
-              feedback_date DATETIME NOT NULL)''')
+              feedback_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
 # create adminLogs table
 c.execute('''CREATE TABLE IF NOT EXISTS adminLogs
              (log_id INTEGER PRIMARY KEY AUTOINCREMENT, 
               user_id INT NOT NULL, 
               action VARCHAR(100) NOT NULL, 
-              action_date DATETIME NOT NULL, 
+              action_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 
               ip_address VARCHAR(50) NOT NULL)''')
 
-# in the cart_id and created_at, dont put anything; never.
+# in the cart_id and created_at, updated_at; dont put anything in these; never.
 c.execute('''CREATE TABLE IF NOT EXISTS cart (
              cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
              customer_id INTEGER NOT NULL,
              product_id INTEGER NOT NULL,
              quantity INTEGER NOT NULL DEFAULT 1,
-             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
 # now = datetime.now()
 # DateTimeNow = now.strftime("%d/%m/%Y %H:%M:%S")
 
     # name, description, parent_category_id, created_at
-# c.execute('''INSERT INTO categories (name, description, parent_category_id, created_at, image) VALUES 
-#           ('mobile', 'just mobiles', 2, DATETIME('now'), 'mobile.png'),
-#           ('electronic', 'all electronic stuff', NULL, DATETIME('now'), 'electronic.png'),
-#           ('laptop', 'all laptops', 2, DATETIME('now'), 'laptop.png'),
-#           ('headphone', 'just headphone', 2, DATETIME('now'), 'headphone.png'),
-#           ('home_And_Kitchen', 'everything in kitchen and house either', NULL, DATETIME('now'), 'HAK.png'),
-#           ('kithen', 'everythin in kitchen', 3, DATETIME('now'), 'kitchen.png'),
-#           ('Furniture_And_Home_Decoration', 'furnitures and intire house decoration either', 3, DATETIME('now'), 'FAHD.png'),
-#           ('hypermarket', 'comestible stuff', NULL, DATETIME('now'), 'hypermarket.png'),
-#           ('snacks', 'snacks stuff', 4, DATETIME('now'), 'snacks.png'),
-#           ('essential_products', 'its just what it is', 4, DATETIME('now'), 'EP.png')''')
+# c.execute('''INSERT INTO categories (name, description, parent_category_id, image) VALUES 
+#           ('mobile', 'just mobiles', 2, 'mobile.png'),
+#           ('electronic', 'all electronic stuff', NULL, 'electronic.png'),
+#           ('laptop', 'all laptops', 2, 'laptop.png'),
+#           ('headphone', 'just headphone', 2, 'headphone.png'),
+#           ('home_And_Kitchen', 'everything in kitchen and house either', NULL, 'HAK.png'),
+#           ('kithen', 'everythin in kitchen', 3, 'kitchen.png'),
+#           ('Furniture_And_Home_Decoration', 'furnitures and intire house decoration either', 3, 'FAHD.png'),
+#           ('hypermarket', 'comestible stuff', NULL, 'hypermarket.png'),
+#           ('snacks', 'snacks stuff', 4, 'snacks.png'),
+#           ('essential_products', 'its just what it is', 4, 'EP.png')''')
 
 # (name, email, phone_number, registration_date)
-# c.execute('''INSERT INTO customers (name, email, phone_number, registration_date) VALUES 
-#             ('customer 0', 'customer0@example.com', '555-123-4560', DATETIME('now')),
-#             ('customer 1', 'customer1@example.com', '555-123-4561', DATETIME('now')),
-#             ('customer 2', 'customer2@example.com', '555-123-4562', DATETIME('now')),
-#             ('customer 3', 'customer3@example.com', '555-123-4563', DATETIME('now')),
-#             ('customer 4', 'customer4@example.com', '555-123-4564', DATETIME('now')),
-#             ('customer 5', 'customer5@example.com', '555-123-4565', DATETIME('now')),
-#             ('customer 6', 'customer6@example.com', '555-123-4566', DATETIME('now')),
-#             ('customer 7', 'customer7@example.com', '555-123-4567', DATETIME('now')),
-#             ('customer 8', 'customer8@example.com', '555-123-4568', DATETIME('now')),
-#             ('customer 9', 'customer9@example.com', '555-123-4569', DATETIME('now')),
-#             ('customer 10', 'customer10@example.com', '555-123-45610', DATETIME('now'));            ''')
+# c.execute('''INSERT INTO customers (name, email, phone_number) VALUES 
+#             ('customer 0', 'customer0@example.com', '555-123-4560'),
+#             ('customer 1', 'customer1@example.com', '555-123-4561'),
+#             ('customer 2', 'customer2@example.com', '555-123-4562'),
+#             ('customer 3', 'customer3@example.com', '555-123-4563'),
+#             ('customer 4', 'customer4@example.com', '555-123-4564'),
+#             ('customer 5', 'customer5@example.com', '555-123-4565'),
+#             ('customer 6', 'customer6@example.com', '555-123-4566'),
+#             ('customer 7', 'customer7@example.com', '555-123-4567'),
+#             ('customer 8', 'customer8@example.com', '555-123-4568'),
+#             ('customer 9', 'customer9@example.com', '555-123-4569'),
+#             ('customer 10', 'customer10@example.com', '555-123-45610');            ''')
 
 # (name, description, price, category_id, image)
 # c.execute('''INSERT INTO products (name, description, price, category_id, image) VALUES ('mobile1', 'its the 1stMobile', 100.25, 1, 'IphoneWhite.jpg'),

@@ -146,11 +146,11 @@ def get_category_with_this_parentID(parent_id):
 
 
 @app.route('/subCategory/<int:sub_cat_id>', methods=["GET"])
-def get_sub_category_id(sub_cat_id):
+def get_sub_category_by_id(sub_cat_id):
     conn = get_db_connection()
     cur = conn.cursor()
     finall_products = []
-    cur.execute(f''' SELECT * FROM products WHERE id = {sub_cat_id} ''')
+    cur.execute(f''' SELECT * FROM products WHERE category_id = {sub_cat_id} ''')
     products = cur.fetchall()
     for product in products:
         with open(f'static/product_images/{product[5]}', 'rb') as image_file:
@@ -164,6 +164,7 @@ def get_sub_category_id(sub_cat_id):
             "image": encoded_string
         })
     return jsonify(finall_products), 200
+
 
 
 @app.route('/products', methods=['GET'])
@@ -203,7 +204,7 @@ def get_db_connection():
 def create_customer(name, email, phone):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(f"INSERT INTO customers (name, email, phone_number, registration_date) VALUES (?, ?, ?, DATETIME('now'))", (name, email, phone,))
+    cur.execute(f"INSERT INTO customers (name, email, phone_number) VALUES (?, ?, ?)", (name, email, phone,))
     conn.commit()
     cur.execute(''' SELECT id from customers order by id DESC LIMIT 1 ''')
     customer_id = cur.fetchone()[0]
@@ -846,11 +847,11 @@ def handle_signup():
 
             # Insert the new customer into the database with the image path
         cur.execute('''
-            INSERT INTO customers (name, email, phone_number, registration_date, image) VALUES (?, ?, ?, DATETIME('now'), ?)''', (name, email, phone, f'{unique_filename}.png'))
+            INSERT INTO customers (name, email, phone_number, image) VALUES (?, ?, ?, ?)''', (name, email, phone, f'{unique_filename}.png'))
     else:
             # Insert the new customer into the database without the image path
         cur.execute('''
-            INSERT INTO customers (name, email, phone_number, registration_date) VALUES (?, ?, ?, DATETIME('now'))''', (name, email, phone))
+            INSERT INTO customers (name, email, phone_number) VALUES (?, ?, ?)''', (name, email, phone))
 
     conn.commit()
     cur.close()
@@ -973,7 +974,7 @@ def update_product_quantity():
     return jsonify({"message": "Cart item quantity updated"}), 200
 
 # check out order shipping feedback
-@app.route('/COOSF', methods=["POST"])
+@app.route('/COOSF', methods=["POST", "PUT"])
 def check_out_add_order():
     customer_id = request.json["customerId"]
     reciepient_name = request.json["customerName"]
@@ -984,69 +985,148 @@ def check_out_add_order():
     state = request.json["state"]
     postal_code = request.json["postalCode"]
     country = request.json["country"]
-    rating = request.json.get("rating")
-    comment = request.json.get("comment")
     response = get_items_quantity_totalCount_totalPrice_customerId(customer_id)
     items = response.get_json()["items"]
     total_amount = response.get_json()["total_price"]
 
 
+    if request.method == "POST":
+        
+        if address_lineTwo:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(''' INSERT INTO orders (customer_id, recipient_name, address_line1, address_line2, state, country, city, postal_code, total_amount, status) VALUES 
+                                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, address_lineTwo, state, country, city, postal_code, total_amount, status,))
+            conn.commit()
+        else:    
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(''' INSERT INTO orders (customer_id, recipient_name, address_line1, state, country, city, postal_code, total_amount, status) VALUES 
+                                (?, ?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, state, country, city, postal_code, total_amount, status,))
+            conn.commit()
 
 
-    # conn = get_db_connection()
-    # cur = conn.cursor()
-    # cur.execute(''' INSERT INTO orders (customer_id, total_amount, status) VALUES 
-    #                     (?, ?, ?) ''', (customer_id, total_amount, status,))                        
-    # conn.commit()
-    # cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
-    # order_id = cur.fetchone()[0]
-    # cur.close()    
-    # conn.close()
+
+        cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
+        order_id = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        for item in items:
+            cur.execute(''' INSERT INTO orderDetails (order_id, product_id, quantity, unit_price) VALUES 
+                                (?, ?, ?, ?)''', (order_id, 
+                                                item["product_id"], 
+                                                item["quantity"], 
+                                                item["product_price"],
+                                                ))
+            conn.commit()
+        cur.close()
+        conn.close()
 
 
 
-    # conn = get_db_connection()
-    # cur = conn.cursor()
-    # for item in items:
-    #     cur.execute(''' INSERT INTO orderDetails (order_id, product_id, quantity, unit_price) VALUES 
-    #                         (?, ?, ?, ?)''', (order_id, 
-    #                                         item["product_id"], 
-    #                                         item["quantity"], 
-    #                                         item["product_price"],
-    #                                          ))
-    #     conn.commit()
-    # cur.close()
-    # conn.close()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' INSERT INTO payments (order_id, payment_method, amount) VALUES 
+                        (?, ?, ?) ''', (order_id, 'Online', total_amount))
+        conn.commit()
+        cur.close()
+        conn.close()
 
-    # if address_lineTwo:
-    #     conn = get_db_connection()
-    #     cur = conn.cursor()
-    #     cur.execute(''' INSERT INTO shippingAddresses (customer_id, recipient_name, address_line1, address_line2, city, state, postal_code, county) VALUES 
-    #                 (?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, address_lineTwo, city, state, postal_code, country,))
-    #     conn.commit()
-    #     cur.close()
-    #     conn.close()
-    # else:
-    #     conn = get_db_connection()
-    #     cur = conn.cursor()
-    #     cur.execute(''' INSERT INTO shippingAddresses (customer_id, recipient_name, address_line1, city, state, postal_code, county) VALUES
-    #                 (?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, city, state, postal_code, country,))
-    #     conn.commit()
-    #     cur.close()
-    #     conn.close()
+
+
+        
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        return jsonify({"message": "ordered successfully"}), 200            
     
+    if request.method == "PUT": 
 
 
-    # conn = get_db_connection()
-    # cur = conn.cursor()
-    # cur.execute(''' INSERT INTO feedbacks (customer_id, order_id, rating, comment) VALUES 
-    #             ( ?, ?, ?, ?) ''', (customer_id, order_id, rating, comment))
-    # conn.commit()
-    # cur.close()
-    # conn.close()
+
+        if address_lineTwo:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(''' INSERT INTO orders (customer_id, recipient_name, address_line1, address_line2, state, country, city, postal_code, total_amount, status) VALUES 
+                                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, address_lineTwo, state, country, city, postal_code, total_amount, status,))
+            conn.commit()
+        else:    
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(''' INSERT INTO orders (customer_id, recipient_name, address_line1, state, country, city, postal_code, total_amount, status) VALUES 
+                                (?, ?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, state, country, city, postal_code, total_amount, status,))
+            conn.commit()
+
+
+
+        cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
+        order_id = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        for item in items:
+            cur.execute(''' INSERT INTO orderDetails (order_id, product_id, quantity, unit_price) VALUES 
+                                (?, ?, ?, ?)''', (order_id, 
+                                                item["product_id"], 
+                                                item["quantity"], 
+                                                item["product_price"],
+                                                ))
+            conn.commit()
+        cur.close()
+        conn.close()
+
+
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' INSERT INTO payments (order_id, payment_method, amount) VALUES 
+                        (?, ?, ?) ''', (order_id, 'in_location', total_amount))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        
+        return jsonify({"message": "price will be in location"}), 200   
+
+
+
+
+# @app.route('/PaymentForCustomer', methods=["POST"])
+# def save_payment_for_customer():
+#     customerId = request.json["customerId"]
+#     customerName = request.json["customerName"]
+#     method = request.json["method"]
     
+#     conn = get_db_connection()
+#     cur = conn.cursor()
+#     cur.execute(''' INSERT INTO payments (order_id, payment_method, amount) VALUES 
+#                     (?, ?, ?) ''', (order_id, 'Online', total_amount))
+#     conn.commit()
+#     cur.close()
+#     conn.close()
 
-    return jsonify({"message": "ordered successfully"}), 200
+#     return jsonify({"message": "payment is true now"})
 
 
 
