@@ -1040,14 +1040,14 @@ def check_out_add_order():
 
         
         
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
+        # conn = get_db_connection()
+        # cur = conn.cursor()
+        # cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
+        # conn.commit()
+        # cur.close()
+        # conn.close()
         
-        return jsonify({"message": "ordered successfully"}), 200            
+        return jsonify({"message": "ordered successfully", "order_id": order_id}), 200          
     
     if request.method == "PUT": 
 
@@ -1099,12 +1099,12 @@ def check_out_add_order():
 
 
 
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
-        conn.commit()
-        cur.close()
-        conn.close()
+        # conn = get_db_connection()
+        # cur = conn.cursor()
+        # cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
+        # conn.commit()
+        # cur.close()
+        # conn.close()
         
         
         return jsonify({"message": "price will be in location"}), 200   
@@ -1112,21 +1112,21 @@ def check_out_add_order():
 
 
 
-# @app.route('/PaymentForCustomer', methods=["POST"])
-# def save_payment_for_customer():
-#     customerId = request.json["customerId"]
-#     customerName = request.json["customerName"]
-#     method = request.json["method"]
-    
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-#     cur.execute(''' INSERT INTO payments (order_id, payment_method, amount) VALUES 
-#                     (?, ?, ?) ''', (order_id, 'Online', total_amount))
-#     conn.commit()
-#     cur.close()
-#     conn.close()
+@app.route('/Invoice/<int:id>', methods=["GET"])
+def get_invoice(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(''' SELECT * FROM orders WHERE order_id = ? ''', (id,))
+    order = cur.fetchone()
+    if order:
+        finall = [{
+            "total_amount": order["total_amount"],
+            "date": order["order_date"],
+        }]
+        return jsonify(finall), 200
+    else:
+        return jsonify({"error": "Order not found"}), 404
 
-#     return jsonify({"message": "payment is true now"})
 
 
 
