@@ -1037,15 +1037,12 @@ def check_out_add_order():
         conn.close()
 
 
-
-        
-        
-        # conn = get_db_connection()
-        # cur = conn.cursor()
-        # cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
-        # conn.commit()
-        # cur.close()
-        # conn.close()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
         
         return jsonify({"message": "ordered successfully", "order_id": order_id}), 200          
     
@@ -1098,18 +1095,15 @@ def check_out_add_order():
         conn.close()
 
 
-
-        # conn = get_db_connection()
-        # cur = conn.cursor()
-        # cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
-        # conn.commit()
-        # cur.close()
-        # conn.close()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' DELETE FROM cart where customer_id = ? ''', (customer_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
         
         
         return jsonify({"message": "price will be in location"}), 200   
-
-
 
 
 @app.route('/Invoice/<int:id>', methods=["GET"])
@@ -1128,8 +1122,25 @@ def get_invoice(id):
         return jsonify({"error": "Order not found"}), 404
 
 
+@app.route('/RaC', methods=["POST"])
+def rate_and_comment():
+    customer_id = request.json["customerId"]
+    rating = request.json["rate"]
+    comment = request.json["comment"]
 
+    conn = get_db_connection()
+    cur = conn.cursor()
 
+    cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
+    order_id = cur.fetchone()[0]
+    
+    cur.execute(''' INSERT INTO feedbacks (customer_id, order_id, rating, comment) VALUES 
+                (?, ?, ?, ?) ''', (customer_id, order_id, rating, comment))
+    conn.commit()
+    conn.close()
+    cur.close()
+
+    return jsonify("success"), 200
 
 
 

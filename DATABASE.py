@@ -34,7 +34,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS orders
               city TEXT NOT NULL,
               postal_code VARCHAR(20) NOT NULL,
               order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              total_amount DECIMAL(10,2) NOT NULL, 
+              total_amount DECIMAL(10,2) NOT NULL,
               status VARCHAR(20) NOT NULL)''')
 
 # create orderDetails table
@@ -66,7 +66,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS users
 c.execute('''CREATE TABLE IF NOT EXISTS payments
              (payment_id INTEGER PRIMARY KEY AUTOINCREMENT, 
               order_id INT NOT NULL, 
-              payment_method VARCHAR(50) NOT NULL, 
+              payment_method VARCHAR(50) NOT NULL,
               amount DECIMAL(10,2) NOT NULL, 
               payment_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
@@ -74,9 +74,9 @@ c.execute('''CREATE TABLE IF NOT EXISTS payments
 c.execute('''CREATE TABLE IF NOT EXISTS feedbacks
              (feedback_id INTEGER PRIMARY KEY AUTOINCREMENT, 
               customer_id INT NOT NULL, 
-              order_id INT NOT NULL, 
+              order_id INT NOT NULL,
               rating INT NOT NULL, 
-              comment TEXT NOT NULL, 
+              comment TEXT NOT NULL,
               feedback_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
 # create adminLogs table
