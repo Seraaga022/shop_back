@@ -25,17 +25,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-# name, description, parent_category_id, created_at
-# def add_one_category(name, description, parent_name):
-#     c.execute(f"SELECT parent_category_id from category where name = {parent_name}")
-#     Pid = c.fetchone()
-#     # 4 column
-#     c.execute(f'''INSERT INTO categories (name, description, parent_category_id, created_at) VALUES 
-#               ({name}, {description}, {Pid}, DATETIME('now'))''')
-#     conn.commit()
-# add_one_category()
-
-
 def get_items_quantity_totalCount_totalPrice_customerId(id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -166,9 +155,31 @@ def get_sub_category_by_id(sub_cat_id):
     return jsonify(finall_products), 200
 
 
-
 @app.route('/products', methods=['GET'])
 def get_products_for_customer():
+    final_products = []
+    for product in DATABASE.GET_ALL_PRODUCTS:
+        # Read the image file and convert it to base64
+        with open(f'static/product_images/{product[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+        
+        final_products.append({
+            "product_id": product[0],
+            "name": product[1],
+            "description": product[2],
+            "price": product[3],
+            "category_id": product[4],
+            "image": encoded_string, # The base64 encoded image
+        })
+
+    return jsonify(final_products), 200
+
+    # if request.method == 'GET':
+    # elif request.method == 'POST':
+
+
+@app.route('/searchProducts', methods=['GET'])
+def get_products_for_customer_search():
     final_products = []
     for product in DATABASE.GET_ALL_PRODUCTS:
         # Read the image file and convert it to base64
@@ -246,9 +257,6 @@ def delete_customer(customer_id):
     cur.execute('DELETE FROM customers WHERE id = ?', (customer_id,))
     conn.commit()
     conn.close()
-
-    
-    
     
     
 # CATEGORY
@@ -678,24 +686,24 @@ def update_category_by_id(id):
     base64_image = request.json['image']
 
     # Check if the base64_image string is in the expected format
-    if ',' in base64_image:
-        # Split the base64 string and decode the second part (the actual image data)
-        try:
-            image_data = base64.b64decode(base64_image.split(',')[1])
-        except IndexError:
-            # Handle the case where the base64_image string does not contain a comma
-            # or the split operation fails for some reason
-            return jsonify({"error": "Invalid image format"}), 400
-    else:
-        # If the base64_image string does not contain a comma,
-        # try to decode it directly (assuming it's a raw base64 string without a data URI scheme)
-        try:
-            image_data = base64.b64decode(base64_image)
-        except base64.binascii.Error:
-            # Handle the case where the base64_image string is not valid base64
-            return jsonify({"error": "Invalid base64 image data"}), 400
+    # if ',' in base64_image:
+    #     # Split the base64 string and decode the second part (the actual image data)
+    #     try:
+    #         image_data = base64.b64decode(base64_image.split(',')[1])
+    #     except IndexError:
+    #         # Handle the case where the base64_image string does not contain a comma
+    #         # or the split operation fails for some reason
+    #         return jsonify({"error": "Invalid image format"}), 400
+    # else:
+    #     # If the base64_image string does not contain a comma,
+    #     # try to decode it directly (assuming it's a raw base64 string without a data URI scheme)
+    #     try:
+    #         image_data = base64.b64decode(base64_image)
+    #     except base64.binascii.Error:
+    #         # Handle the case where the base64_image string is not valid base64
+    #         return jsonify({"error": "Invalid base64 image data"}), 400
+    # image = Image.open(io.BytesIO(image_data))
 
-    image = Image.open(io.BytesIO(image_data))
 
     # Convert to PNG if not already
     if image.format != 'PNG':
@@ -713,7 +721,7 @@ def update_category_by_id(id):
 @app.route('/category/<int:id>', methods=['DELETE'])
 def delete_category_by_id(id):
     delete_category(id)
-    return jsonify({"category_id":id}), 200
+    return jsonify({"category_id": id}), 200
   
 
 
@@ -768,6 +776,7 @@ def delete_product_by_id(product_id):
     return jsonify({"product_id":product_id}), 200
 
 
+
 # check if client exicsts or not
 def user_exists(phone, username):
     conn = get_db_connection()
@@ -796,7 +805,7 @@ def handle_login():
             'email': customer[2],
             'phone': customer[3],
             'date': customer[4],
-            'image': encoded_string,
+            'image': "data:image/png;base64," + encoded_string,
         }), 200
     else:
         return jsonify({'message': 'User does not exist'}), 400
@@ -973,14 +982,13 @@ def update_product_quantity():
 
     return jsonify({"message": "Cart item quantity updated"}), 200
 
-# check out order shipping feedback
+# check out order
 @app.route('/COOSF', methods=["POST", "PUT"])
 def check_out_add_order():
     customer_id = request.json["customerId"]
     reciepient_name = request.json["customerName"]
     status = request.json["status"]
-    address_lineOne = request.json["addressLineOne"]
-    address_lineTwo = request.json.get("addressLineTwo")
+    address_lineOne = request.json["address"]
     city = request.json["city"]
     state = request.json["state"]
     postal_code = request.json["postalCode"]
@@ -992,19 +1000,20 @@ def check_out_add_order():
 
     if request.method == "POST":
         
-        if address_lineTwo:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(''' INSERT INTO orders (customer_id, recipient_name, address_line1, address_line2, state, country, city, postal_code, total_amount, status) VALUES 
-                                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, address_lineTwo, state, country, city, postal_code, total_amount, status,))
-            conn.commit()
-        else:    
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(''' INSERT INTO orders (customer_id, recipient_name, address_line1, state, country, city, postal_code, total_amount, status) VALUES 
-                                (?, ?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, state, country, city, postal_code, total_amount, status,))
-            conn.commit()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' INSERT INTO orders (customer_id, total_amount, status) VALUES 
+                        (?, ?, ?) ''', (customer_id, total_amount, status))
+        conn.commit()
+        cur.close()
+        conn.close()
 
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' INSERT INTO addresses (recipient_name, address, state, country, city, postal_code) VALUES 
+                            (?, ?, ?, ?, ?, ?) ''', (reciepient_name, address_lineOne, state, country, city, postal_code))
+        conn.commit()
 
 
         cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
@@ -1050,19 +1059,11 @@ def check_out_add_order():
 
 
 
-        if address_lineTwo:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(''' INSERT INTO orders (customer_id, recipient_name, address_line1, address_line2, state, country, city, postal_code, total_amount, status) VALUES 
-                                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, address_lineTwo, state, country, city, postal_code, total_amount, status,))
-            conn.commit()
-        else:    
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(''' INSERT INTO orders (customer_id, recipient_name, address_line1, state, country, city, postal_code, total_amount, status) VALUES 
-                                (?, ?, ?, ?, ?, ?, ?, ?, ?) ''', (customer_id, reciepient_name, address_lineOne, state, country, city, postal_code, total_amount, status,))
-            conn.commit()
-
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(''' INSERT INTO addresses (recipient_name, address, state, country, city, postal_code) VALUES 
+                            (?, ?, ?, ?, ?, ?) ''', (reciepient_name, address_lineOne, state, country, city, postal_code))
+        conn.commit()
 
 
         cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
@@ -1083,7 +1084,6 @@ def check_out_add_order():
             conn.commit()
         cur.close()
         conn.close()
-
 
 
         conn = get_db_connection()
@@ -1121,7 +1121,7 @@ def get_invoice(id):
     else:
         return jsonify({"error": "Order not found"}), 404
 
-
+# rate and comment
 @app.route('/RaC', methods=["POST"])
 def rate_and_comment():
     customer_id = request.json["customerId"]
@@ -1130,17 +1130,94 @@ def rate_and_comment():
 
     conn = get_db_connection()
     cur = conn.cursor()
-
     cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
     order_id = cur.fetchone()[0]
-    
+    cur.close()
+    conn.close()
+
+    conn = get_db_connection()
+    cur = conn.cursor()
     cur.execute(''' INSERT INTO feedbacks (customer_id, order_id, rating, comment) VALUES 
                 (?, ?, ?, ?) ''', (customer_id, order_id, rating, comment))
     conn.commit()
-    conn.close()
     cur.close()
+    conn.close()
 
     return jsonify("success"), 200
+
+
+@app.route('/updateCustomer/<id>', methods=["POST"])
+def update_customer_profile(id):
+    email = request.json["email"]
+    phone = request.json["phone"]
+    name = request.json["name"]
+    base64_img = request.json.get("image")
+
+    if base64_img:
+        image_data = base64.b64decode(base64_img.split(',')[1]) # Remove the data URI scheme if present
+        image = Image.open(io.BytesIO(image_data))
+
+        # Convert to PNG if not already
+        if image.format != 'PNG':
+            image = image.convert('RGBA')
+
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(f''' SELECT * FROM customers where id = {id} ''')
+        filenameRmv = cur.fetchone()[5]
+        print(filenameRmv)
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        # Delete the previes file
+        rmv_path = os.path.join('static/customer_img', filenameRmv)
+        os.remove(rmv_path)
+
+        # Generate a unique filename for the image
+        unique_filename = generate_unique_filename_png('static/customer_img')
+        image_path = os.path.join('static/customer_img', f'{unique_filename}.png')
+        image.save(image_path)
+
+        # Update the customer's image path in the database
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('UPDATE customers SET name = ?, email = ?, phone_number = ?, image = ? where id = ?', (name, email, phone, f'{unique_filename}.png', id))
+        conn.commit()
+        cur.close()
+        conn.close()
+    else:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('UPDATE customers SET name = ?, email = ?, phone_number = ? where id = ?', (name, email, phone, id))
+        conn.commit()
+        conn.close()
+        cur.close()
+
+    return jsonify('customer successfully updated')
+
+
+@app.route('/customerProfile/<id>', methods=['GET'])
+def get_customer_by_id_profile(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM customers WHERE id = ?', (id,))
+    customer = cur.fetchone()
+    with open(f'static/customer_img/{customer[5]}', 'rb') as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+    final_customer = {
+            "id": customer[0],
+            "name": customer[1],
+            "email": customer[2],
+            "phone_number": customer[3],
+            "registration_date": customer[4],
+            "image": "data:image/png;base64," + encoded_string,
+        }
+    conn.close()
+    
+    return jsonify(final_customer), 200
+
 
 
 

@@ -26,16 +26,19 @@ c.execute('''CREATE TABLE IF NOT EXISTS products
 c.execute('''CREATE TABLE IF NOT EXISTS orders
              (order_id INTEGER PRIMARY KEY AUTOINCREMENT, 
               customer_id INT NOT NULL, 
-              recipient_name TEXT NOT NULL,
-              address_line1 TEXT NOT NULL,
-              address_line2 TEXT,
-              state TEXT NOT NULL,
-              country TEXT NOT NULL,
-              city TEXT NOT NULL,
-              postal_code VARCHAR(20) NOT NULL,
               order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
               total_amount DECIMAL(10,2) NOT NULL,
               status VARCHAR(20) NOT NULL)''')
+
+# create addresses table
+c.execute(''' CREATE TABLE IF NOT EXISTS addresses
+          (id INTEGER PRIMARY KEY AUTOINCREMENT,
+           recipient_name TEXT NOT NULL,
+           address TEXT NOT NULL,
+           state TEXT NOT NULL,
+           country TEXT NOT NULL,
+           city TEXT NOT NULL,
+           postal_code VARCHAR(20) NOT NULL)''')
 
 # create orderDetails table
 c.execute('''CREATE TABLE IF NOT EXISTS orderDetails
