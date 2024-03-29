@@ -1061,6 +1061,14 @@ def check_out_add_order():
 
         conn = get_db_connection()
         cur = conn.cursor()
+        cur.execute(''' INSERT INTO orders (customer_id, total_amount, status) VALUES 
+                        (?, ?, ?) ''', (customer_id, total_amount, status))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        conn = get_db_connection()
+        cur = conn.cursor()
         cur.execute(''' INSERT INTO addresses (recipient_name, address, state, country, city, postal_code) VALUES 
                             (?, ?, ?, ?, ?, ?) ''', (reciepient_name, address_lineOne, state, country, city, postal_code))
         conn.commit()
@@ -1218,7 +1226,22 @@ def get_customer_by_id_profile(id):
     
     return jsonify(final_customer), 200
 
+@app.route('/ordersIngageCustomer/<id>', methods=["GET"])
+def ordersIngageCustomer(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(''' SELECT * from orders WHERE status = 'pending' OR status = 'sent' OR status = 'completed' AND customer_id = ? ''', (id,))
+    orders = cur.fetchall()
+    for order in orders: 
+        finall_orders = [{
+            "id": order["order_id"],
+            "customer_id": order["customer_id"],
+            "date": order["order_date"],
+            "total_amount": order["total_amount"],
+            "status": order["status"]
+        }]
 
+    return jsonify(finall_orders), 200
 
 
 
