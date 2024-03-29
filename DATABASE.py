@@ -106,6 +106,25 @@ c.execute('''CREATE TABLE IF NOT EXISTS adminAns (
               ans TEXT NOT NULL,
               date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ''')
 
+# create order_status_history table
+c.execute('''CREATE TABLE IF NOT EXISTS order_status_history
+             (id INTEGER PRIMARY KEY AUTOINCREMENT,
+              customer_id INTEGER,
+              order_id INTEGER,
+              old_status TEXT,
+              new_status TEXT,
+              changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
+
+# Define the trigger
+c.execute(''' CREATE TRIGGER IF NOT EXISTS order_status_change
+              AFTER UPDATE OF status ON orders
+              FOR EACH ROW
+              BEGIN
+              INSERT INTO order_status_history (customer_id, order_id, old_status, new_status)
+              VALUES (OLD.customer_id, OLD.order_id, OLD.status, NEW.status);
+              END;''')
+
+
 # now = datetime.now()
 # DateTimeNow = now.strftime("%d/%m/%Y %H:%M:%S")
 

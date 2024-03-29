@@ -1181,7 +1181,8 @@ def update_customer_profile(id):
 
         # Delete the previes file
         rmv_path = os.path.join('static/customer_img', filenameRmv)
-        os.remove(rmv_path)
+        if filenameRmv != 'blank-img.png':
+            os.remove(rmv_path)
 
         # Generate a unique filename for the image
         unique_filename = generate_unique_filename_png('static/customer_img')
@@ -1220,7 +1221,7 @@ def get_customer_by_id_profile(id):
             "email": customer[2],
             "phone_number": customer[3],
             "registration_date": customer[4],
-            "image": "data:image/png;base64," + encoded_string,
+            "image": "data:image;base64," + encoded_string,
         }
     conn.close()
     
@@ -1231,7 +1232,7 @@ def get_customer_by_id_profile(id):
 def ordersIngageCustomer(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(''' SELECT * from orders WHERE (status = 'pending' OR status = 'sent' OR status = 'completed') AND customer_id = ? GROUP BY order_id ''', (id,))
+    cur.execute(''' SELECT * from orders WHERE (status = 'pending' OR status = 'sent') AND customer_id = ? GROUP BY order_id ''', (id,))
     orders = cur.fetchall()
     finall_orders = []
     for order in orders: 
@@ -1250,7 +1251,7 @@ def ordersIngageCustomer(id):
 def ordersHistoryCustomer(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(''' SELECT * from orders WHERE customer_id = ? ''', (id,))
+    cur.execute(''' SELECT * from orders WHERE (status = 'completed' OR status = 'canceled') AND customer_id = ? ''', (id,))
     orders = cur.fetchall()
     finall_orders = []
     for order in orders: 
@@ -1263,6 +1264,27 @@ def ordersHistoryCustomer(id):
         })
 
     return jsonify(finall_orders), 200
+
+
+@app.route('/updatedStatusOrder/<id>', methods=["GET"])
+def updatedStatusOrder(id):
+    conn = sqlite3.Connection('db/DATAbase.db')
+    cur = conn.cursor()
+    cur.execute(f''' SELECT id, order_id, new_status
+                    FROM order_status_history
+                    WHERE new_status != old_status AND customer_id = {id} ORDER BY changed_at DESC LIMIT 1 ''')
+    sendItems = cur.fetchone()
+    if sendItems:
+        OSH_id = sendItems[0]
+        order_id = sendItems[1]
+        new_status = sendItems[2]
+    else:
+        return jsonify({"message": "there is not any data for this customer !!"}), 200
+
+    return jsonify({"id": OSH_id, "order_id": order_id, "status": new_status, "message": "ok"}), 200
+
+
+
 
 
 
