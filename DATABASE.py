@@ -99,6 +99,13 @@ c.execute('''CREATE TABLE IF NOT EXISTS cart (
              created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
              updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
+c.execute('''CREATE TABLE IF NOT EXISTS adminAns (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              admin_name TEXT NOT NULL,
+              feedback_id INTEGER NOT NULL,
+              ans TEXT NOT NULL,
+              date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ''')
+
 # now = datetime.now()
 # DateTimeNow = now.strftime("%d/%m/%Y %H:%M:%S")
 

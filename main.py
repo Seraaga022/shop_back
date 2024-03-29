@@ -1226,11 +1226,31 @@ def get_customer_by_id_profile(id):
     
     return jsonify(final_customer), 200
 
+
 @app.route('/ordersIngageCustomer/<id>', methods=["GET"])
 def ordersIngageCustomer(id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(''' SELECT * from orders WHERE (status = 'pending' OR status = 'sent' OR status = 'completed') AND customer_id = ? GROUP BY order_id ''', (id,))
+    orders = cur.fetchall()
+    finall_orders = []
+    for order in orders: 
+        finall_orders.append({
+            "id": order["order_id"],
+            "customer_id": order["customer_id"],
+            "date": order["order_date"],
+            "total_amount": order["total_amount"],
+            "status": order["status"],
+        })
+
+    return jsonify(finall_orders), 200
+
+
+@app.route('/ordersHistoryCustomer/<id>', methods=["GET"])
+def ordersHistoryCustomer(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(''' SELECT * from orders WHERE customer_id = ? ''', (id,))
     orders = cur.fetchall()
     finall_orders = []
     for order in orders: 
