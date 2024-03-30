@@ -414,64 +414,6 @@ def test_backEnd():
 
 
 # CUSTOMER
-# this is good, dont delete it
-# @app.route('/customer', methods=['GET'])
-# def list_customer():
-#     logging.debug("Received 'GET' request for /customer")
-#     range_str = request.args.get('range')
-#     sort_str = request.args.get('sort')
-
-#     # Initialize variables for pagination and sorting
-#     start = 0
-#     end = 10 # Default end value, adjust as needed
-#     field = 'id' # Default sort field
-#     order = 'ASC' # Default sort order
-
-#     # Parse range if provided
-#     if range_str:
-#         range_list = json.loads(range_str)
-#         start = range_list[0]
-#         end = range_list[1]
-    
-#     # Parse sort if provided
-#     if sort_str:
-#         sort_list = json.loads(sort_str)
-#         field = sort_list[0]
-#         order = sort_list[1]
-        
-#     # Log the parsed parameters for debugging
-#     # print(f"Range: {start}-{end}, Sort: {field} {order}")
-#     logging.debug(f'Range: {start}-{end}, Sort: {field} {order}')
-    
-#     # Establish a database connection and cursor if not already done
-#     conn = sqlite3.connect('db/DATAbase.db')
-#     cur = conn.cursor()
-    
-#     # allowed_fields = ['customer_id', 'name', 'email', 'phone', 'registration_date']
-#     # if field not in allowed_fields:
-#     #     return jsonify({"error": "Invalid field for sorting"}), 400
-
-#     # For example, if you're using SQLite, your query might look like this:
-#     cur.execute(f'SELECT * FROM customers ORDER BY customer_{field} {order} LIMIT ? OFFSET ?', (end - start + 1, start))
-    
-#     # Fetch the customers from the database
-#     customers = cur.fetchall()
-    
-#     # Convert the database records to a list of dictionaries for the response
-#     final_customers = []
-#     for customer in customers:
-#         final_customers.append({
-#             "customer_id": customer[0],
-#             "name": customer[1],
-#             "email": customer[2],
-#             "phone": customer[3],
-#             "registration_date": customer[4],
-#         })
-    
-#     # Return the customers as JSON
-#     return jsonify(final_customers), 200
-
-
 @app.route('/customer', methods=['GET'])
 def list_customer():
     logging.debug("Received 'GET' request for /customer")
@@ -484,7 +426,7 @@ def list_customer():
     end = 10 # Default end value, adjust as needed
     field = 'id' # Default sort field
     order = 'ASC' # Default sort order
-    filters = {} # Default empty filter
+    filters = {} # Corrected: Initialize filters as an empty dictionary
     
     if range_str:
         range_list = json.loads(range_str)
@@ -502,16 +444,26 @@ def list_customer():
     conn = sqlite3.connect('db/DATAbase.db')
     cur = conn.cursor()
 
-    query = f'SELECT * FROM customers ORDER BY {field} {order} LIMIT ? OFFSET ?'
-    params = (end - start + 1, start)
-    
+    # Corrected: Start with a base query that always evaluates to true
+    query = "SELECT * FROM customers WHERE 1=1"
+    params = []
+
     # Apply filters to the query
     for key, value in filters.items():
-        query += f' AND {key} = ?'
-        params += (value)
-    
+        query += f" AND {key} LIKE '%{value}%'"
+
+    # Add the ORDER BY clause
+    query += f" ORDER BY {field} {order}"
+
+    # Add the LIMIT and OFFSET clauses
+    query += f" LIMIT ? OFFSET ?"
+    params.append(end - start + 1) # Limit
+    params.append(start) # Offset
+
+    # Execute the query with the params
+    print(query, params)
     cur.execute(query, params)
-    
+
     # Fetch the customers from the database
     customers = cur.fetchall()
     
@@ -525,7 +477,7 @@ def list_customer():
             "name": customer[1],
             "email": customer[2],
             "phone": customer[3],
-            "registration_date": customer[4],
+            # "registration_date": customer[4],
             "image": encoded_string,
         })
 
@@ -583,7 +535,7 @@ def list_category():
     end = 10 # Default end value, adjust as needed
     field = 'id' # Default sort field
     order = 'ASC' # Default sort order
-    filters = {} # Default empty filter
+    filters = {} # Corrected: Initialize filters as an empty dictionary
     
     if range_str:
         range_list = json.loads(range_str)
@@ -601,53 +553,54 @@ def list_category():
     conn = sqlite3.connect('db/DATAbase.db')
     cur = conn.cursor()
 
-    # Construct the query based on the field
-    if field == 'PCI':
-        query = f'SELECT * FROM categories ORDER BY parent_category_id {order} LIMIT ? OFFSET ?'
-    else:
-        query = f'SELECT * FROM categories ORDER BY {field} {order} LIMIT ? OFFSET ?'
-    
-    params = [end - start + 1, start]
-    
+    # Corrected: Start with a base query that always evaluates to true
+    query = "SELECT * FROM categories WHERE 1=1"
+    params = []
+
     # Apply filters to the query
     for key, value in filters.items():
-        query += f' AND {key} = ?'
-        params += (value)
-    
-    try:
-        cur.execute(query, params)
-    except Exception as e:
-        logging.error(f"Error executing query: {e}")
-        return jsonify({"error": "An error occurred while processing the request"}), 500
+        query += f" AND {key} LIKE '%{value}%'"
 
+    # Add the ORDER BY clause
+    query += f" ORDER BY {field} {order}"
+
+    # Add the LIMIT and OFFSET clauses
+    query += f" LIMIT ? OFFSET ?"
+    params.append(end - start + 1) # Limit
+    params.append(start) # Offset
+
+    # Execute the query with the params
+    print(query, params)
     cur.execute(query, params)
-    
+
     # Fetch the customers from the database
     categories = cur.fetchall()
+    final_categories = []
     
     # Convert the database records to a list of dictionaries for the response
-    final_categories = []
     for category in categories:
-        with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
         final_categories.append({
             "id": category[0],
             "name": category[1],
             "description": category[2],
             "parent_category_id": category[3],
             "created_at": category[4],
-            "image": encoded_string,
         })
 
     total_count = len(DATABASE.GET_ALL_CATEGORIES)
     # total_count = 123
     response = jsonify(final_categories)
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    return response, 200
+
+    total_count = len(DATABASE.GET_ALL_CUSTOMERS)
+    response = jsonify(final_customers)
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] = f'customers 0-{len(final_categories)}/{total_count}'
     return response, 200
 
-# (name, description, parent_category_id, image, category_id)
 
+# (name, description, parent_category_id, image, category_id)
 @app.route('/category', methods=['POST'])
 def add_category():
     name = request.json['name']
