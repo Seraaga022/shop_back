@@ -32,13 +32,13 @@ c.execute('''CREATE TABLE IF NOT EXISTS orders
 
 # create addresses table
 c.execute(''' CREATE TABLE IF NOT EXISTS addresses
-          (id INTEGER PRIMARY KEY AUTOINCREMENT,
-           recipient_name TEXT NOT NULL,
-           address TEXT NOT NULL,
-           state TEXT NOT NULL,
-           country TEXT NOT NULL,
-           city TEXT NOT NULL,
-           postal_code VARCHAR(20) NOT NULL)''')
+                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipient_name TEXT NOT NULL,
+                address TEXT NOT NULL,
+                state TEXT NOT NULL,
+                country TEXT NOT NULL,
+                city TEXT NOT NULL,
+                postal_code VARCHAR(20) NOT NULL)''')
 
 # create orderDetails table
 c.execute('''CREATE TABLE IF NOT EXISTS orderDetails
@@ -99,6 +99,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS cart (
              created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
              updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
+# create admins answer to feedbacks table
 c.execute('''CREATE TABLE IF NOT EXISTS adminAns (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               admin_name TEXT NOT NULL,

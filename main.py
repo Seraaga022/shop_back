@@ -1284,10 +1284,37 @@ def updatedStatusOrder(id):
     return jsonify({"id": OSH_id, "order_id": order_id, "status": new_status, "message": "ok"}), 200
 
 
+@app.route('/FeedAnsR/<id>', methods=["GET"])
+def ans_feedback_customer(id):
+    conn = sqlite3.Connection('db/DATAbase.db')
+    c = conn.cursor()
+    c.execute(''' SELECT *, feedbacks.comment, feedbacks.feedback_date, feedbacks.rating  FROM adminAns JOIN feedbacks ON feedbacks.feedback_id = adminAns.feedback_id WHERE feedbacks.customer_id = ? ''', (id,))
+    columns = c.fetchall()
+    finall = []
+    if columns:
+        for column in columns:
+            finall.append({
+                "admin_name": column[1],
+                "answer": column[3],
+                "ans_date": column[4],
+                "feedback": column[9],
+                "cus_date": column[10],
+                "rating": column[8],
+            })
+    
+    return jsonify(finall), 200
 
 
 
 
+
+
+
+# @app.after_request
+# def add_header(response):
+#     # Add a custom header to the response
+#     response.headers['X-Custom-Header'] = 'Custom Value'
+#     return response
 
 @app.errorhandler(404)
 def error(e):
