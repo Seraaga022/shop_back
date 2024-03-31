@@ -93,8 +93,12 @@ def Check_out_info(id):
 
 @app.route('/Pcategories', methods=["GET"])
 def get_parent_categories():
+    conn = sqlite3.Connection('db/DATAbase.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM categories where parent_category_id IS NULL")
+    PARENT_CATEGORIES = c.fetchall()
     category_list = []
-    for category in DATABASE.GET_PARENT_CATEGORIES:
+    for category in PARENT_CATEGORIES:
         with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
 
@@ -483,7 +487,7 @@ def list_customer():
         })
 
     total_count = len(DATABASE.GET_ALL_CUSTOMERS)
-    response = jsonify(final_customers)
+    response = jsonify({"data": final_customers})
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] = f'customers 0-{len(final_customers)}/{total_count}'
     return response, 200
@@ -584,7 +588,8 @@ def list_category():
             "id": category[0],
             "name": category[1],
             "description": category[2],
-            "parent_category_id": category[3],
+            # "PCI": category[3],
+            "PCI": category[3] if category[3] is not None else 'parent',
             "created_at": category[4],
         })
 
@@ -594,7 +599,6 @@ def list_category():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'customers 0-{len(final_categories)}/{total_count}'
     return response, 200
-
 
 
 # (name, description, parent_category_id, image, category_id)
@@ -611,7 +615,7 @@ def create_category():
             image = image.convert('RGBA')
         image_filename = f'{name}.png'
         image_path = os.path.join('static/category_symbol', image_filename)
-        image.save(image_path, 'PNG') # Corrected line: Specify 'PNG' as the format
+        image.save(image_path, 'PNG') # Specify 'PNG' as the format
 
     if parent_category_id:
         conn = get_db_connection()
@@ -660,37 +664,15 @@ def update_category_by_id(id):
     name = request.json['name']
     description = request.json['description']
     parent_category_id = request.json['PCI']
-    # base64_image = request.json['image']
+    image_file = request.files.get("image")
 
-    # Check if the base64_image string is in the expected format
-    # if ',' in base64_image:
-    #     # Split the base64 string and decode the second part (the actual image data)
-    #     try:
-    #         image_data = base64.b64decode(base64_image.split(',')[1])
-    #     except IndexError:
-    #         # Handle the case where the base64_image string does not contain a comma
-    #         # or the split operation fails for some reason
-    #         return jsonify({"error": "Invalid image format"}), 400
-    # else:
-    #     # If the base64_image string does not contain a comma,
-    #     # try to decode it directly (assuming it's a raw base64 string without a data URI scheme)
-    #     try:
-    #         image_data = base64.b64decode(base64_image)
-    #     except base64.binascii.Error:
-    #         # Handle the case where the base64_image string is not valid base64
-    #         return jsonify({"error": "Invalid base64 image data"}), 400
-    # image = Image.open(io.BytesIO(image_data))
+    if image_file: 
+        if image.format != 'PNG':
+            image = image.convert('RGBA')
+        image_path = os.path.join('static/category_symbol', f'{name}.png')
+        image.save(image_path)
 
 
-    # Convert to PNG if not already
-    # if image.format != 'PNG':
-    #     image = image.convert('RGBA')
-
-    # Save image to folder
-    # image_path = os.path.join('static/category_symbol', f'{name}.png')
-    # image.save(image_path)
-
-    # Assuming update_category function is defined elsewhere
     # updated = update_category(name, description, parent_category_id, f'{name}.png', id)
     updated = update_category(name, description, parent_category_id, id)
     return jsonify(updated), 200
