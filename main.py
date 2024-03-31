@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template, send_file, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS, cross_origin
+from werkzeug.utils import secure_filename
 from PIL import Image
 import DATABASE as DATABASE
 import sqlite3
@@ -277,24 +278,24 @@ def get_category(category_id):
     cur = conn.cursor()
     cur.execute('SELECT * FROM categories WHERE id = ?', (category_id,))
     category = cur.fetchone()
-    with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+    # with open(f'static/category_symbol/{category[5]}', 'rb') as image_file:
+    #         encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
     final_category = {
             "id": category[0],
             "name": category[1],
             "description": category[2],
             "PCI": category[3],
             # "created_at": category[4],
-            "image": encoded_string,
+            # "image": encoded_string,
         }
     conn.close()
     return final_category
 
 # Update a category
-def update_category(name, description, parent_category_id, image, category_id):
+def update_category(name, description, parent_category_id, category_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE categories SET name = ?, description = ?, parent_category_id = ?, image = ? WHERE id = ?', (name, description, parent_category_id, image, category_id,))
+    cur.execute('UPDATE categories SET name = ?, description = ?, parent_category_id = ? WHERE id = ?', (name, description, parent_category_id, category_id,))
     conn.commit()
     conn.close()
     return get_category(category_id)
@@ -522,7 +523,7 @@ def delete_customer_by_id(id):
 
 
 
-# category
+# CATEGORY
 @app.route('/category', methods=['GET'])
 def list_category():
     logging.debug("Received 'GET' request for /category")
@@ -589,38 +590,61 @@ def list_category():
 
     total_count = len(DATABASE.GET_ALL_CATEGORIES)
     # total_count = 123
-    response = jsonify(final_categories)
+    response = jsonify({ "data": final_categories })
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] =f'customers 0-{len(final_categories)}/{total_count}'
     return response, 200
 
-    total_count = len(DATABASE.GET_ALL_CUSTOMERS)
-    response = jsonify(final_customers)
-    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
-    response.headers['Content-Range'] = f'customers 0-{len(final_categories)}/{total_count}'
-    return response, 200
 
 
 # (name, description, parent_category_id, image, category_id)
 @app.route('/category', methods=['POST'])
-def add_category():
-    name = request.json['name']
-    description = request.json['description']
-    parent_category_id = request.json['PCI']
-    base64_image = request.json['image']
+def create_category():
+    name = request.form['name']
+    description = request.form['description']
+    parent_category_id = request.form.get('PCI')
+    image_file = request.files.get('image')
 
-    image_data = base64.b64decode(base64_image.split(',')[1])
-    image = Image.open(io.BytesIO(image_data))
+    if image_file:
+        image = Image.open(image_file)
+        if image.format.upper() != 'PNG':
+            image = image.convert('RGBA')
+        image_filename = f'{name}.png'
+        image_path = os.path.join('static/category_symbol', image_filename)
+        image.save(image_path, 'PNG') # Corrected line: Specify 'PNG' as the format
 
-        # Convert to PNG if not already
-    if image.format != 'PNG':
-        image = image.convert('RGBA')
+    if parent_category_id:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(f"INSERT INTO categories (name, description, parent_category_id, image) VALUES (?, ?, ?)", (name, description, parent_category_id, f'{name}.png'))
+        conn.commit()
+        cur.execute(''' SELECT id from categories order by id DESC LIMIT 1 ''')
+        category_id = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+    else: 
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(f"INSERT INTO categories (name, description, image) VALUES (?, ?, ?)", (name, description, f'{name}.png'))
+        conn.commit()
+        cur.execute(''' SELECT id from categories order by id DESC LIMIT 1 ''')
+        category_id = cur.fetchone()[0]
+        cur.close()
+        conn.close()
 
-        # Save image to folder
-    image_path = os.path.join('static/category_symbol', f'{name}.png')
-    image.save(image_path)
+    conn = get_db_connection() 
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM categories WHERE id = ?', (category_id,))
+    category = cur.fetchone()
+    final_category = {
+            "id": category[0],
+            "name": category[1],
+            "description": category[2],
+            "PCI": category[3],
+        }
+    conn.close()
 
-    category_id = create_category(name, description, parent_category_id, image, category_id)
-    return jsonify(get_category(category_id)), 201
+    return jsonify(final_category), 201
 
 
 @app.route('/category/<int:id>', methods=['GET'])
@@ -636,7 +660,7 @@ def update_category_by_id(id):
     name = request.json['name']
     description = request.json['description']
     parent_category_id = request.json['PCI']
-    base64_image = request.json['image']
+    # base64_image = request.json['image']
 
     # Check if the base64_image string is in the expected format
     # if ',' in base64_image:
@@ -659,15 +683,16 @@ def update_category_by_id(id):
 
 
     # Convert to PNG if not already
-    if image.format != 'PNG':
-        image = image.convert('RGBA')
+    # if image.format != 'PNG':
+    #     image = image.convert('RGBA')
 
     # Save image to folder
-    image_path = os.path.join('static/category_symbol', f'{name}.png')
-    image.save(image_path)
+    # image_path = os.path.join('static/category_symbol', f'{name}.png')
+    # image.save(image_path)
 
     # Assuming update_category function is defined elsewhere
-    updated = update_category(name, description, parent_category_id, f'{name}.png', id)
+    # updated = update_category(name, description, parent_category_id, f'{name}.png', id)
+    updated = update_category(name, description, parent_category_id, id)
     return jsonify(updated), 200
 
 
