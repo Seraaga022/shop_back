@@ -15,8 +15,8 @@ c.execute('''CREATE TABLE IF NOT EXISTS customers
 
 # create products table
 c.execute('''CREATE TABLE IF NOT EXISTS products
-             (product_id INTEGER PRIMARY KEY AUTOINCREMENT,
-              name VARCHAR(100) NOT NULL, 
+             (id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name VARCHAR(100) NOT NULL,
               description TEXT NOT NULL, 
               price DECIMAL(10,2) NOT NULL, 
               category_id INT NOT NULL, 
@@ -24,7 +24,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS products
 
 # create orders table
 c.execute('''CREATE TABLE IF NOT EXISTS orders
-             (order_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, 
               customer_id INT NOT NULL, 
               order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
               total_amount DECIMAL(10,2) NOT NULL,
@@ -42,7 +42,7 @@ c.execute(''' CREATE TABLE IF NOT EXISTS addresses
 
 # create orderDetails table
 c.execute('''CREATE TABLE IF NOT EXISTS orderDetails
-             (order_detail_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, 
               order_id INT NOT NULL,
               product_id INT NOT NULL, 
               quantity INT NOT NULL,
@@ -59,7 +59,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS categories
 
 # create users table
 c.execute('''CREATE TABLE IF NOT EXISTS users
-             (user_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, 
               username VARCHAR(50) NOT NULL, 
               password_hash VARCHAR(100) NOT NULL,
               email VARCHAR(100) NOT NULL, 
@@ -67,7 +67,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS users
 
 # create payments table
 c.execute('''CREATE TABLE IF NOT EXISTS payments
-             (payment_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, 
               order_id INT NOT NULL, 
               payment_method VARCHAR(50) NOT NULL,
               amount DECIMAL(10,2) NOT NULL, 
@@ -75,7 +75,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS payments
 
 # create feedbacks table
 c.execute('''CREATE TABLE IF NOT EXISTS feedbacks
-             (feedback_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, 
               customer_id INT NOT NULL, 
               order_id INT NOT NULL,
               rating INT NOT NULL, 
@@ -84,7 +84,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS feedbacks
 
 # create adminLogs table
 c.execute('''CREATE TABLE IF NOT EXISTS adminLogs
-             (log_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, 
               user_id INT NOT NULL, 
               action VARCHAR(100) NOT NULL, 
               action_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 
@@ -92,7 +92,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS adminLogs
 
 # in the cart_id and created_at, updated_at; dont put anything in these; never.
 c.execute('''CREATE TABLE IF NOT EXISTS cart (
-             cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
              customer_id INTEGER NOT NULL,
              product_id INTEGER NOT NULL,
              quantity INTEGER NOT NULL DEFAULT 1,
@@ -207,3 +207,5 @@ c.execute("SELECT * FROM categories where parent_category_id IS NULL")
 GET_PARENT_CATEGORIES = c.fetchall()
 c.execute("SELECT * FROM cart")
 GET_ALL_CARTS = c.fetchall()
+c.execute('SELECT * FROM adminAns')
+GET_ALL_ADMIN_ANSs = c.fetchall() 

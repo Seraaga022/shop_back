@@ -205,13 +205,16 @@ def get_products_for_customer_search():
     # elif request.method == 'POST':
 
 
-# --------------------------------------------------------------------------------------------------------------------
-
+@app.route('/', methods=["GET"])
+def test_back_end():
+    return jsonify('ok')
 
 def get_db_connection():
     conn = sqlite3.connect('db/DATAbase.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+
 
 
 # CUSTOMER
@@ -312,8 +315,6 @@ def delete_category(category_id):
     conn.close()
 
 
-
-
 # PRODUCT
 # Create a new product
 def create_product(name, description, price, category_id, image):
@@ -326,32 +327,29 @@ def create_product(name, description, price, category_id, image):
     conn.close()
     return product_id
 
-# # Get a product by ID
-# def get_product(product_id):
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-#     cur.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
-#     product = cur.fetchone()
-#     with open(f'static/product_images/{product[5]}', 'rb') as image_file:
-#             encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-#     final_products = {
-#             "product_id": product[0],
-#             "name": product[1],
-#             "description": product[2],
-#             "price": product[3],
-#             "category_id": product[4],
-#             "image": encoded_string, # The base64 encoded image
-#         }
-#     conn.close()
-#     if product is None:
-#         return '', 404
-#     return jsonify(final_products), 200
-
-# Update a product
-def update_product(product_id, name, description, price, category_id, image):
+# Get a product by ID
+def get_product(product_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE products SET name = ?, description = ?, price = ?, category_id = ?, image = ? WHERE product_id = ?', (name, description, price, category_id, image, product_id))
+    cur.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
+    product = cur.fetchone()
+    final_products = {
+            "product_id": product[0],
+            "name": product[1],
+            "description": product[2],
+            "price": product[3],
+            "category_id": product[4],
+        }
+    conn.close()
+    if product is None:
+        return '', 404
+    return jsonify(final_products), 200
+
+# Update a product
+def update_product(product_id, name, description, price, category_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('UPDATE products SET name = ?, description = ?, price = ?, category_id = ?, image = ? WHERE product_id = ?', (name, description, price, category_id, product_id))
     conn.commit()
     conn.close()
     # return get_product(product_id)
@@ -365,15 +363,7 @@ def delete_product(product_id):
     conn.close()
 
 
-
-
-
-
-
-@app.route('/', methods=['GET'])
-def test_backEnd():
-    return jsonify('ok')
-
+# -------------------------- ROUTES --------------------------------
 
 
 
@@ -642,6 +632,78 @@ def delete_category_by_id(id):
 
 
 # PRODUCT
+@app.route('/category', methods=['GET'])
+def list_category():
+    logging.debug("Received 'GET' request for /products")
+    range_str = request.args.get('range')
+    sort_str = request.args.get('sort')
+    filter_str = request.args.get('filter')
+    
+    # Initialize variables for pagination, sorting, and filtering
+    start = 0
+    end = 10 # Default end value, adjust as needed
+    field = 'id' # Default sort field
+    order = 'ASC' # Default sort order
+    filters = {} # Corrected: Initialize filters as an empty dictionary
+    
+    if range_str:
+        range_list = json.loads(range_str)
+        start = range_list[0]
+        end = range_list[1]
+    
+    if sort_str:
+        sort_list = json.loads(sort_str)
+        field = sort_list[0]
+        order = sort_list[1]
+    
+    if filter_str:
+        filters = json.loads(filter_str)
+    
+    conn = sqlite3.connect('db/DATAbase.db')
+    cur = conn.cursor()
+
+    # Corrected: Start with a base query that always evaluates to true
+    query = "SELECT * FROM products WHERE 1=1"
+    params = []
+
+    # Apply filters to the query
+    for key, value in filters.items():
+        query += f" AND {key} LIKE '%{value}%'"
+
+    # Add the ORDER BY clause
+    query += f" ORDER BY {field} {order}"
+
+    # Add the LIMIT and OFFSET clauses
+    query += f" LIMIT ? OFFSET ?"
+    params.append(end - start + 1) # Limit
+    params.append(start) # Offset
+
+    # Execute the query with the params
+    print(query, params)
+    cur.execute(query, params)
+
+    # Fetch the customers from the database
+    products = cur.fetchall()
+    final_products = []
+    
+    # Convert the database records to a list of dictionaries for the response
+    for category in products:
+        final_products.append({
+            "id": category[0],
+            "name": category[1],
+            "description": category[2],
+            "PCI": category[3] if category[3] is not None else 'parent',
+            "created_at": category[4],
+        })
+
+    total_count = len(DATABASE.GET_ALL_PRODUCTS)
+    response = jsonify({ "data": final_products })
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] =f'customers 0-{len(final_products)}/{total_count}'
+    return response, 200
+
+
+
 @app.route('/product', methods=['POST'])
 def add_product():
     name = request.json['name']
@@ -651,6 +713,7 @@ def add_product():
     image = request.json['image']
     product_id = create_customer(name, description, price, category_id, image)
     # return jsonify(get_product(product_id)), 201
+
 
 @app.route('/product/<int:product_id>', methods=['GET'])
 def get_product_by_id(product_id):
@@ -673,6 +736,7 @@ def get_product_by_id(product_id):
         return '', 404
     return jsonify(final_products), 200
 
+
 @app.route('/product/<int:product_id>', methods=['PUT'])
 def update_product_by_id(product_id):
     name = request.json['name']
@@ -682,6 +746,7 @@ def update_product_by_id(product_id):
     image = request.json['image']
     updated = update_product(product_id, name, description, price, category_id, image)
     return jsonify(updated), 200
+
 
 @app.route('/product/<int:product_id>', methods=['DELETE'])
 def delete_product_by_id(product_id):
