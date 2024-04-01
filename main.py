@@ -19,9 +19,8 @@ CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 logging.basicConfig(level=logging.INFO)
 # app.config['SECRET_KEY'] = 'its my very secret password that no one supposed to know'
-# logging.getLogger('flask_cors').level = logging.DEBUG
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/DATAbase.db'
-# db = SQLAlchemy(app)
+# logging.getLogger('flask_cors').level = logging.DEBUG
 
 
 
@@ -220,7 +219,7 @@ def get_db_connection():
 def create_customer(name, email, phone):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(f"INSERT INTO customers (name, email, phone_number) VALUES (?, ?, ?)", (name, email, phone,))
+    cur.execute(f"INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)", (name, email, phone,))
     conn.commit()
     cur.execute(''' SELECT id from customers order by id DESC LIMIT 1 ''')
     customer_id = cur.fetchone()[0]
@@ -239,7 +238,7 @@ def get_customer(customer_id):
             "id": customer[0],
             "name": customer[1],
             "email": customer[2],
-            "phone_number": customer[3],
+            "phone": customer[3],
             "registration_date": customer[4],
             "image": encoded_string,
         }
@@ -250,7 +249,7 @@ def get_customer(customer_id):
 def update_customer(customer_id, name, email, phone):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE customers SET name = ?, email = ?, phone_number = ? WHERE id = ?', (name, email, phone, customer_id))
+    cur.execute('UPDATE customers SET name = ?, email = ?, phone = ? WHERE id = ?', (name, email, phone, customer_id))
     conn.commit()
     conn.close()
     return get_customer(customer_id)
@@ -299,7 +298,7 @@ def get_category(category_id):
 def update_category(name, description, parent_category_id, category_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE categories SET name = ?, description = ?, parent_category_id = ? WHERE id = ?', (name, description, parent_category_id, category_id,))
+    cur.execute('UPDATE categories SET name = ?, description = ?, parent_category_id = ? WHERE id = ?', (name, description, parent_category_id, category_id))
     conn.commit()
     conn.close()
     return get_category(category_id)
@@ -365,28 +364,6 @@ def delete_product(product_id):
     conn.commit()
     conn.close()
 
-# # Get all products
-# def get_all_products(limit):
-# # def get_all_customers():
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-#     cur.execute(f'SELECT * FROM products LIMIT {limit}')
-#     # cur.execute(f'SELECT * FROM products')
-#     products = cur.fetchall()
-#     final_products = []
-#     for product in products:
-#         final_products.append({
-#             "product_id": product[0],
-#             "name": product[1],
-#             "description": product[2],
-#             "price": product[3],
-#             "category_id": product[4],
-#             "image": product[5],
-#         })
-#     conn.close()
-#     return final_products
-
-
 
 
 
@@ -396,24 +373,6 @@ def delete_product(product_id):
 @app.route('/', methods=['GET'])
 def test_backEnd():
     return jsonify('ok')
-
-
-# @app.route('/category/<int:id>')
-# def get_category_by_id(id):
-#     conn = get_db_connection()
-#     cur = conn.cursor()
-#     cur.execute(f"SELECT * from categories where id = ?", (id,))
-#     category = cur.fetchone()
-#     final_cate = {
-#         "category_id": category[0],
-#         "name": category[1],
-#         "description": category[2],
-#         "parent_category_id": category[3],
-#         "created_at": category[4],
-#         "image": category[5],
-#     }
-#     conn.close()
-#     return jsonify(final_cate), 200
 
 
 
@@ -475,15 +434,11 @@ def list_customer():
     # Convert the database records to a list of dictionaries for the response
     final_customers = []
     for customer in customers:
-        with open(f'static/customer_img/{customer[5]}', 'rb') as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
         final_customers.append({
             "id": customer[0],
             "name": customer[1],
             "email": customer[2],
             "phone": customer[3],
-            # "registration_date": customer[4],
-            "image": encoded_string,
         })
 
     total_count = len(DATABASE.GET_ALL_CUSTOMERS)
@@ -512,9 +467,9 @@ def get_customer_by_id(id):
 
 @app.route('/customer/<int:id>', methods=['PUT'])
 def update_customer_by_id(id):
-    name = request.json['name']
-    email = request.json['email']
-    phone = request.json['phone']
+    name = request.form.get('name')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
     updated = update_customer(id, name, email, phone)
     return jsonify(updated), 200
 
@@ -601,7 +556,6 @@ def list_category():
     return response, 200
 
 
-# (name, description, parent_category_id, image, category_id)
 @app.route('/category', methods=['POST'])
 def create_category():
     name = request.form['name']
@@ -661,17 +615,16 @@ def get_category_by_id(id):
 
 @app.route('/category/<int:id>', methods=['PUT'])
 def update_category_by_id(id):
-    name = request.json['name']
-    description = request.json['description']
-    parent_category_id = request.json['PCI']
-    image_file = request.files.get("image")
+    name = request.form.get('name')
+    description = request.form.get('description')
+    parent_category_id = request.form.get('PCI')
+    # image_file = request.files.get("image")
 
-    if image_file: 
-        if image.format != 'PNG':
-            image = image.convert('RGBA')
-        image_path = os.path.join('static/category_symbol', f'{name}.png')
-        image.save(image_path)
-
+    # if image_file: 
+    #     if image.format != 'PNG':
+    #         image = image.convert('RGBA')
+    #     image_path = os.path.join('static/category_symbol', f'{name}.png')
+    #     image.save(image_path)
 
     # updated = update_category(name, description, parent_category_id, f'{name}.png', id)
     updated = update_category(name, description, parent_category_id, id)
@@ -741,7 +694,7 @@ def delete_product_by_id(product_id):
 def user_exists(phone, username):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('''SELECT * FROM customers WHERE phone_number = ? AND name = ?''', (phone, username))
+    cur.execute('''SELECT * FROM customers WHERE phone = ? AND name = ?''', (phone, username))
         # Fetch the result
     result = cur.fetchone()
         # Close the cursor and connection
@@ -816,11 +769,11 @@ def handle_signup():
 
             # Insert the new customer into the database with the image path
         cur.execute('''
-            INSERT INTO customers (name, email, phone_number, image) VALUES (?, ?, ?, ?)''', (name, email, phone, f'{unique_filename}.png'))
+            INSERT INTO customers (name, email, phone, image) VALUES (?, ?, ?, ?)''', (name, email, phone, f'{unique_filename}.png'))
     else:
             # Insert the new customer into the database without the image path
         cur.execute('''
-            INSERT INTO customers (name, email, phone_number) VALUES (?, ?, ?)''', (name, email, phone))
+            INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)''', (name, email, phone))
 
     conn.commit()
     cur.close()
@@ -1152,14 +1105,14 @@ def update_customer_profile(id):
         # Update the customer's image path in the database
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('UPDATE customers SET name = ?, email = ?, phone_number = ?, image = ? where id = ?', (name, email, phone, f'{unique_filename}.png', id))
+        cur.execute('UPDATE customers SET name = ?, email = ?, phone = ?, image = ? where id = ?', (name, email, phone, f'{unique_filename}.png', id))
         conn.commit()
         cur.close()
         conn.close()
     else:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('UPDATE customers SET name = ?, email = ?, phone_number = ? where id = ?', (name, email, phone, id))
+        cur.execute('UPDATE customers SET name = ?, email = ?, phone = ? where id = ?', (name, email, phone, id))
         conn.commit()
         conn.close()
         cur.close()
@@ -1179,7 +1132,7 @@ def get_customer_by_id_profile(id):
             "id": customer[0],
             "name": customer[1],
             "email": customer[2],
-            "phone_number": customer[3],
+            "phone": customer[3],
             "registration_date": customer[4],
             "image": "data:image;base64," + encoded_string,
         }
