@@ -1390,15 +1390,25 @@ def list_feedback():
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
-    query = "SELECT * FROM feedbacks WHERE 1=1"
+    query = "SELECT feedbacks.* FROM feedbacks WHERE 1=1"
     params = []
+
+    isCustomer_name = 'customer_name' in filters
+    if isCustomer_name:
+        query = "SELECT feedbacks.* FROM feedbacks"
+        query += " JOIN customers ON feedbacks.customer_id = customers.id WHERE 1=1"
 
     # Apply filters to the query
     for key, value in filters.items():
-        query += f" AND {key} LIKE '%{value}%'"
+        if key == 'customer_name':
+            query += f" AND customers.name LIKE ?"
+            params.append(f"%{value}%")
+        else:
+            query += f" AND feedbacks.{key} LIKE ?"
+            params.append(f"%{value}%")
 
     # Add the ORDER BY clause
-    query += f" ORDER BY {field} {order}"
+    query += f" ORDER BY feedbacks.{field} {order}"
 
     # Add the LIMIT and OFFSET clauses
     query += f" LIMIT ? OFFSET ?"
@@ -1494,12 +1504,13 @@ def update_feedback_by_id(id):
     # rating = request.form.get('rating')
     # comment_text = request.form.get('comment')
     feedback_id = request.form.get('id')
+    admin_name = request.form.get('admin_name')
     ans = request.form.get('ans')
 
     conn = get_db_connection()
     c = conn.cursor()
     # c.execute(''' UPDATE feedbacks SET customer_id = ?, order_id = ?, rating = ?, comment WHERE id = ? ''', (customer_id, order_id, rating, comment_text, id,))
-    c.execute("INSERT INTO adminAns(admin_name, feedback_id, ans) VALUES (?, ?, ?)", ("John Doe", feedback_id, ans))
+    c.execute("INSERT INTO adminAns(admin_name, feedback_id, ans) VALUES (?, ?, ?)", (admin_name, feedback_id, ans))
     conn.commit()
     c.close()
 
