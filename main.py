@@ -71,7 +71,7 @@ def Check_out_info(id):
     total_price = 0
     cur.execute('''SELECT *, COUNT(products.price) AS price FROM cart 
                      JOIN products
-                     ON products.product_id = cart.product_id
+                     ON products.id = cart.product_id
                      WHERE customer_id = ?
                      GROUP BY cart.cart_id
                 ''', (id,)) # Use parameterized query
@@ -1361,7 +1361,7 @@ def delete_admin_log_by_id(id):
 # FEEDBACK
 @app.route('/feedback', methods=['GET'])
 def list_feedback():
-    logging.debug("Received 'GET' request for /addresses")
+    logging.debug("Received 'GET' request for /feedback")
     range_str = request.args.get('range')
     sort_str = request.args.get('sort')
     filter_str = request.args.get('filter')
@@ -1390,7 +1390,7 @@ def list_feedback():
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
-    query = "SELECT * FROM addresses WHERE 1=1"
+    query = "SELECT * FROM feedbacks WHERE 1=1"
     params = []
 
     # Apply filters to the query
@@ -1410,124 +1410,114 @@ def list_feedback():
     cur.execute(query, params)
 
     # Fetch the customers from the database
-    addresses = cur.fetchall()
-    final_addresses = []
+    feedbacks = cur.fetchall()
+    final_feedbacks = []
     
     # Convert the database records to a list of dictionaries for the response
-    for address in addresses:
-        final_addresses.append({
-            "id": address[0],
-            "order_id": address[1],
-            "recipient_name": address[2],
-            "address": address[3],
-            "state": address[4],
-            "country": address[5],
-            "city": address[6],
-            "postal_code": address[7],
+    for feedback in feedbacks:
+        final_feedbacks.append({
+            "id": feedback[0],
+            "customer_id": feedback[1],
+            "order_id": feedback[2],
+            "rating": feedback[3],
+            "comment": feedback[4],
+            "feedback_date": feedback[4],
         })
 
-    total_count = len(DATABASE.GET_ALL_ADDRESSs)
-    response = jsonify({ "data": final_addresses })
+    total_count = len(DATABASE.GET_ALL_FEEDBACKS)
+    response = jsonify({ "data": final_feedbacks })
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
-    response.headers['Content-Range'] =f'addresses 0-{len(final_addresses)}/{total_count}'
+    response.headers['Content-Range'] =f'feedbacks 0-{len(final_feedbacks)}/{total_count}'
     return response, 200
 
 
 @app.route('/feedback', methods=['POST'])
 def create_feedback():
+    customer_id = request.form.get('customer_id')
     order_id = request.form.get('order_id')
-    name = request.form.get('recipient_name')
-    address = request.form.get('address')
-    state = request.form.get('state')
-    country = request.form.get('country')
-    city = request.form.get('city')
-    poste = request.form.get('postal_code')
+    rating = request.form.get('rating')
+    comment_text = request.form.get('comment')
 
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(''' INSERT INTO addresses(order_id, recipient_name, address, state, country, city, postal_code) VALUES (?, ?, ?, ?, ?, ?, ?)''', (order_id, name, address, state, country, city, poste))
+    cur.execute(''' INSERT INTO feedbacks(customer_id, order_id, rating, comment) VALUES (?, ?, ?, ?)''', (customer_id, order_id, rating, comment_text))
     conn.commit()
-    cur.execute(''' SELECT id from addresses order by id DESC LIMIT 1 ''')
-    address_id = cur.fetchone()[0]
+    cur.execute(''' SELECT id from feedbacks order by id DESC LIMIT 1 ''')
+    feedback_id = cur.fetchone()[0]
     cur.close()
     conn.close()
 
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM addresses WHERE id = ?', (address_id,))
-    address = cur.fetchone()
-    final_address = {
-        "id": address[0],
-        "order_id": address[1],
-        "recipient_name": address[2],
-        "address": address[3],
-        "state": address[4],
-        "country": address[5],
-        "city": address[6],
-        "postal_code": address[7],
+    cur.execute('SELECT * FROM feedbacks WHERE id = ?', (feedback_id,))
+    feedback = cur.fetchone()
+    final_feedback = {
+        "id": feedback[0],
+        "customer_id": feedback[1],
+        "order_id": feedback[2],
+        "rating": feedback[3],
+        "comment": feedback[4],
+        "feedback_date": feedback[4],
         }
     conn.close()
 
-    return jsonify(final_address), 201
+    return jsonify(final_feedback), 201
 
 
 @app.route('/feedback/<int:id>', methods=['GET'])
 def get_feedback_by_id(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM addresses WHERE id = ?', (id,))
-    address = cur.fetchone()
-    final_address = {
-            "id": address[0],
-            "order_id": address[1],
-            "recipient_name": address[2],
-            "address": address[3],
-            "state": address[4],
-            "country": address[5],
-            "city": address[6],
-            "postal_code": address[7],
-        }
+    cur.execute('SELECT * FROM feedbacks WHERE id = ?', (id,))
+    feedback = cur.fetchone()
+    final_feedback = {
+        "id": feedback[0],
+        "customer_id": feedback[1],
+        "order_id": feedback[2],
+        "rating": feedback[3],
+        "comment": feedback[4],
+        "feedback_date": feedback[4],  
+        "ans": "",
+    }
     conn.close()
-    if address is None:
+    if feedback is None:
         return '', 404
-    return jsonify(final_address), 200
+    return jsonify(final_feedback), 200
 
 
 @app.route('/feedback/<int:id>', methods=['PUT'])
 def update_feedback_by_id(id):
-    order_id = request.form.get('order_id')
-    name = request.form.get('recipient_name')
-    address = request.form.get('address')
-    state = request.form.get('state')
-    country = request.form.get('country')
-    city = request.form.get('city')
-    poste = request.form.get('postal_code')
+    # customer_id = request.form.get('customer_id')
+    # order_id = request.form.get('order_id')
+    # rating = request.form.get('rating')
+    # comment_text = request.form.get('comment')
+    feedback_id = request.form.get('id')
+    ans = request.form.get('ans')
 
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute(''' UPDATE addresses SET order_id = ?, recipient_name = ?, address = ?, state = ?, country = ?, city = ?, postal_code = ? WHERE id = ? ''', (order_id, name, address, state, country, city, poste, id,))
+    # c.execute(''' UPDATE feedbacks SET customer_id = ?, order_id = ?, rating = ?, comment WHERE id = ? ''', (customer_id, order_id, rating, comment_text, id,))
+    c.execute("INSERT INTO adminAns(admin_name, feedback_id, ans) VALUES (?, ?, ?)", ("John Doe", feedback_id, ans))
     conn.commit()
     c.close()
 
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute(''' SELECT * FROM addresses WHERE id = ? ''', (id,))
-    address = c.fetchone()
-    final_back = {
-        "id": address[0],
-        "order_id": address[1],
-        "recipient_name": address[2],
-        "address": address[3],
-        "state": address[4],
-        "country": address[5],
-        "city": address[6],
-        "postal_code": address[7],
+    c.execute(''' SELECT * FROM feedbacks WHERE id = ? ''', (id,))
+    feedback = c.fetchone()
+    final_feedback = {
+        "id": feedback[0],
+        "customer_id": feedback[1],
+        "order_id": feedback[2],
+        "rating": feedback[3],
+        "comment": feedback[4],
+        "feedback_date": feedback[4],
     }
     conn.close()
 
-    return jsonify(final_back), 200
+    return jsonify(final_feedback), 200
 
 
 @app.route('/feedback/<int:id>', methods=['DELETE'])
@@ -1849,12 +1839,12 @@ def get_Shopping_cart_items_by_user_id(C_ID):
                 cart.quantity, 
                 cart.created_at, 
                 cart.updated_at, 
-                products.product_id, 
+                products.id, 
                 products.name, 
                 products.price, 
                 products.image
             FROM cart 
-            JOIN products ON cart.product_id = products.product_id 
+            JOIN products ON cart.product_id = products.id 
             WHERE cart.customer_id = ?''', (cart_id,))
     CARTS = cur.fetchall()
     for cart in CARTS:
@@ -2173,7 +2163,7 @@ def ordersIngageCustomer(id):
     finall_orders = []
     for order in orders: 
         finall_orders.append({
-            "id": order["order_id"],
+            "id": order["id"],
             "customer_id": order["customer_id"],
             "date": order["order_date"],
             "total_amount": order["total_amount"],
@@ -2192,7 +2182,7 @@ def ordersHistoryCustomer(id):
     finall_orders = []
     for order in orders: 
         finall_orders.append({
-            "id": order["order_id"],
+            "id": order["id"],
             "customer_id": order["customer_id"],
             "date": order["order_date"],
             "total_amount": order["total_amount"],
@@ -2224,7 +2214,7 @@ def updatedStatusOrder(id):
 def ans_feedback_customer(id):
     conn = sqlite3.Connection('db/DATAbase.db')
     c = conn.cursor()
-    c.execute(''' SELECT *, feedbacks.comment, feedbacks.feedback_date, feedbacks.rating  FROM adminAns JOIN feedbacks ON feedbacks.feedback_id = adminAns.feedback_id WHERE feedbacks.customer_id = ? ''', (id,))
+    c.execute(''' SELECT *, feedbacks.comment, feedbacks.feedback_date, feedbacks.rating  FROM adminAns JOIN feedbacks ON feedbacks.id = adminAns.feedback_id WHERE feedbacks.customer_id = ? ''', (id,))
     columns = c.fetchall()
     finall = []
     if columns:
