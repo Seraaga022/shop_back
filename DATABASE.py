@@ -86,7 +86,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS feedbacks
 c.execute('''CREATE TABLE IF NOT EXISTS adminLogs
              (id INTEGER PRIMARY KEY AUTOINCREMENT, 
               user_id INT NOT NULL, 
-              action VARCHAR(100) NOT NULL, 
+              action VARCHAR(100) NOT NULL,
               action_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 
               ip_address VARCHAR(50) NOT NULL)''')
 
@@ -207,5 +207,11 @@ c.execute("SELECT * FROM categories where parent_category_id IS NULL")
 GET_PARENT_CATEGORIES = c.fetchall()
 c.execute("SELECT * FROM cart")
 GET_ALL_CARTS = c.fetchall()
+c.execute("SELECT * FROM addresses")
+GET_ALL_ADDRESSs = c.fetchall()
+c.execute('SELECT * FROM payments')
+GET_ALL_PAYMENTS = c.fetchall()
 c.execute('SELECT * FROM adminAns')
 GET_ALL_ADMIN_ANSs = c.fetchall() 
+c.execute('SELECT * FROM adminLogs')
+GET_ALL_ADMIN_LOGS = c.fetchall() 

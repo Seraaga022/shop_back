@@ -216,13 +216,15 @@ def get_db_connection():
 
 
 
+# -------------------------- ADMIN START -----------------------
+# -------------------------- FUNCTIONS ---------------
 
 # CUSTOMER
 # Create a new customer
-def create_customer(name, email, phone):
+def create_customer(name, email, phone, image):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(f"INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)", (name, email, phone,))
+    cur.execute(" INSERT INTO customers (name, email, phone, image) VALUES (?, ?, ?, ?)", (name, email, phone, image))
     conn.commit()
     cur.execute(''' SELECT id from customers order by id DESC LIMIT 1 ''')
     customer_id = cur.fetchone()[0]
@@ -266,6 +268,7 @@ def delete_customer(customer_id):
     conn.close()
     
     
+
 # CATEGORY
 # Create a new category
 def create_category(name, description, parent_category_id, image):
@@ -315,6 +318,7 @@ def delete_category(category_id):
     conn.close()
 
 
+
 # PRODUCT
 # Create a new product
 def create_product(name, description, price, category_id, image):
@@ -322,7 +326,7 @@ def create_product(name, description, price, category_id, image):
     cur = conn.cursor()
     cur.execute("INSERT INTO products (name, description, price, category_id, image) VALUES (?, ?, ?, ?, ?)", (name, description, price, category_id, image))
     conn.commit()
-    cur.execute(''' SELECT product_id FROM products ORDER BY product_id DESC LIMIT 1 ''')
+    cur.execute(''' SELECT id FROM products ORDER BY id DESC LIMIT 1 ''')
     product_id = cur.fetchone()[0]
     conn.close()
     return product_id
@@ -331,41 +335,73 @@ def create_product(name, description, price, category_id, image):
 def get_product(product_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
+    cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
     product = cur.fetchone()
     final_products = {
-            "product_id": product[0],
-            "name": product[1],
-            "description": product[2],
-            "price": product[3],
-            "category_id": product[4],
+        "product_id": product[0],
+        "name": product[1],
+        "description": product[2],
+        "price": product[3],
+        "category_id": product[4],
         }
     conn.close()
     if product is None:
         return '', 404
-    return jsonify(final_products), 200
+    return final_products
 
 # Update a product
 def update_product(product_id, name, description, price, category_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('UPDATE products SET name = ?, description = ?, price = ?, category_id = ?, image = ? WHERE product_id = ?', (name, description, price, category_id, product_id))
+    cur.execute('UPDATE products SET name = ?, description = ?, price = ?, category_id = ? WHERE id = ?', (name, description, price, category_id, product_id))
     conn.commit()
-    conn.close()
-    # return get_product(product_id)
 
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+    product = cur.fetchone()
+    final_products = {
+        "product_id": product[0],
+        "name": product[1],
+        "description": product[2],
+        "price": product[3],
+        "category_id": product[4],
+        }
+    conn.close()
+    if product is None:
+        return '', 404
+    return final_products
+    
 # Delete a product
 def delete_product(product_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('DELETE FROM products WHERE product_id = ?', (product_id,))
+    cur.execute('DELETE FROM products WHERE id = ?', (product_id,))
     conn.commit()
     conn.close()
 
 
-# -------------------------- ROUTES --------------------------------
+def get_user_name_by_id(id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' SELECT * from users WHERE id = ? ''', (id,))
+    user_name = ''
+    if c.fetchone() != None:
+        user_name = c.fetchone()[1]
+    return user_name
 
 
+def get_user_id_by_name(name):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' SELECT * FROM users WHERE username = ? ''', (name))
+    user_id = 0
+    if c.fetchone() != None:
+        user_id = c.fetcone()[0]
+    
+    return user_id
+
+# -------------------------- ROUTES ------
 
 # CUSTOMER
 @app.route('/customer', methods=['GET'])
@@ -439,11 +475,38 @@ def list_customer():
 
 
 @app.route('/customer', methods=['POST'])
-def add_customer():
-    name = request.json['name']
-    phone = request.json['phone']
-    email = request.json['email']
-    customer_id = create_customer(name, email, phone)
+def create_customer():
+    name = request.form['name']
+    phone = request.form['phone']
+    email = request.form['email']
+    image_file = request.files.get('image')
+
+    if user_exists(phone, name):
+        return jsonify({'message': 'User already exists'}), 400
+    if image_file:
+        image = Image.open(image_file)
+        if image.format.upper() != 'PNG':
+            image = image.convert('RGBA')
+        unique_filename = generate_unique_filename_png('static/customer_img')
+        image_filename = f'{unique_filename}.png'
+        image_path = os.path.join('static/customer_img', image_filename)
+        image.save(image_path, 'PNG') # Specify 'PNG' as the format
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(" INSERT INTO customers (name, email, phone, image) VALUES (?, ?, ?, ?)", (name, email, phone, image_filename))
+        conn.commit()
+        cur.execute(''' SELECT id from customers order by id DESC LIMIT 1 ''')
+        customer_id = cur.fetchone()[0]
+        conn.close()
+    else: 
+        cur = conn.cursor()
+        cur.execute(" INSERT INTO customers (name, email, phone) VALUES (?, ?, ?)", (name, email, phone))
+        conn.commit()
+        cur.execute(''' SELECT id from customers order by id DESC LIMIT 1 ''')
+        customer_id = cur.fetchone()[0]
+        conn.close()
+
     return jsonify(get_customer(customer_id)), 201
 
 
@@ -468,7 +531,7 @@ def update_customer_by_id(id):
 def delete_customer_by_id(id):
     delete_customer(id)
     return jsonify({"customer_id":id}), 200
-    
+
 
 
 
@@ -616,7 +679,6 @@ def update_category_by_id(id):
     #     image_path = os.path.join('static/category_symbol', f'{name}.png')
     #     image.save(image_path)
 
-    # updated = update_category(name, description, parent_category_id, f'{name}.png', id)
     updated = update_category(name, description, parent_category_id, id)
     return jsonify(updated), 200
 
@@ -629,11 +691,9 @@ def delete_category_by_id(id):
 
 
 
-
-
 # PRODUCT
-@app.route('/category', methods=['GET'])
-def list_category():
+@app.route('/product', methods=['GET'])
+def list_product():
     logging.debug("Received 'GET' request for /products")
     range_str = request.args.get('range')
     sort_str = request.args.get('sort')
@@ -687,13 +747,13 @@ def list_category():
     final_products = []
     
     # Convert the database records to a list of dictionaries for the response
-    for category in products:
+    for product in products:
         final_products.append({
-            "id": category[0],
-            "name": category[1],
-            "description": category[2],
-            "PCI": category[3] if category[3] is not None else 'parent',
-            "created_at": category[4],
+            "id": product[0],
+            "name": product[1],
+            "description": product[2],
+            "price": product[3],
+            "Cat": product[4],
         })
 
     total_count = len(DATABASE.GET_ALL_PRODUCTS)
@@ -703,33 +763,60 @@ def list_category():
     return response, 200
 
 
-
 @app.route('/product', methods=['POST'])
-def add_product():
-    name = request.json['name']
-    description = request.json['description']
-    price = request.json['price']
-    category_id = request.json['category_id']
-    image = request.json['image']
-    product_id = create_customer(name, description, price, category_id, image)
-    # return jsonify(get_product(product_id)), 201
+def create_product():
+    name = request.form.get('name')
+    description = request.form.get('description')
+    price = request.form.get('price')
+    category_id = request.form.get('Cat')
+    image_file = request.files.get('image')
+
+    if image_file:
+        image = Image.open(image_file)
+        if image.format.upper() != 'JPEG':
+            image = image.convert('RGB')
+        image_filename = f'{name}.jpeg'
+        image_path = os.path.join('static/product_images', image_filename)
+        image.save(image_path, 'JPEG')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(f"INSERT INTO products (name, description, price, category_id, image) VALUES (?, ?, ?, ?, ?)", (name, description, price, category_id, f'{name}.jpeg'))
+    conn.commit()
+    cur.execute(''' SELECT id from categories order by id DESC LIMIT 1 ''')
+    product_id = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+
+
+    conn = get_db_connection() 
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+    product = cur.fetchone()
+    final_product = {
+        "id": product[0],
+        "name": product[1],
+        "description": product[2],
+        "price": product[3],
+        "category_id": product[4],
+        }
+    conn.close()
+
+    return jsonify(final_product), 201
 
 
 @app.route('/product/<int:product_id>', methods=['GET'])
 def get_product_by_id(product_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
+    cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
     product = cur.fetchone()
-    with open(f'static/product_images/{product[5]}', 'rb') as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
     final_products = {
-            "product_id": product[0],
+            "id": product[0],
             "name": product[1],
             "description": product[2],
             "price": product[3],
-            "category_id": product[4],
-            "image": encoded_string, # The base64 encoded image
+            "Cat": product[4],
         }
     conn.close()
     if product is None:
@@ -739,19 +826,892 @@ def get_product_by_id(product_id):
 
 @app.route('/product/<int:product_id>', methods=['PUT'])
 def update_product_by_id(product_id):
-    name = request.json['name']
-    description = request.json['description']
-    price = request.json['price']
-    category_id = request.json['category_id']
-    image = request.json['image']
-    updated = update_product(product_id, name, description, price, category_id, image)
+    name = request.form.get('name')
+    description = request.form.get('description')
+    price = request.form.get('price')
+    category_id = request.form.get('Cat')
+    updated = update_product(product_id, name, description, price, category_id)
     return jsonify(updated), 200
 
 
 @app.route('/product/<int:product_id>', methods=['DELETE'])
 def delete_product_by_id(product_id):
     delete_product(product_id)
-    return jsonify({"product_id":product_id}), 200
+    return jsonify({"product_id": product_id}), 200
+
+
+
+
+# PAYMENT
+@app.route('/payment', methods=['GET'])
+def list_payment():
+    logging.debug("Received 'GET' request for /payments")
+    range_str = request.args.get('range')
+    sort_str = request.args.get('sort')
+    filter_str = request.args.get('filter')
+    
+    # Initialize variables for pagination, sorting, and filtering
+    start = 0
+    end = 10 # Default end value, adjust as needed
+    field = 'id' # Default sort field
+    order = 'ASC' # Default sort order
+    filters = {} # Corrected: Initialize filters as an empty dictionary
+    
+    if range_str:
+        range_list = json.loads(range_str)
+        start = range_list[0]
+        end = range_list[1]
+    
+    if sort_str:
+        sort_list = json.loads(sort_str)
+        field = sort_list[0]
+        order = sort_list[1]
+    
+    if filter_str:
+        filters = json.loads(filter_str)
+    
+    conn = sqlite3.connect('db/DATAbase.db')
+    cur = conn.cursor()
+
+    # Corrected: Start with a base query that always evaluates to true
+    query = "SELECT * FROM payments WHERE 1=1"
+    params = []
+
+    # Apply filters to the query
+    for key, value in filters.items():
+        query += f" AND {key} LIKE '%{value}%'"
+
+    # Add the ORDER BY clause
+    query += f" ORDER BY {field} {order}"
+
+    # Add the LIMIT and OFFSET clauses
+    query += f" LIMIT ? OFFSET ?"
+    params.append(end - start + 1) # Limit
+    params.append(start) # Offset
+
+    # Execute the query with the params
+    print(query, params)
+    cur.execute(query, params)
+
+    # Fetch the customers from the database
+    payments = cur.fetchall()
+    final_payments = []
+    
+    # Convert the database records to a list of dictionaries for the response
+    for payment in payments:
+        final_payments.append({
+            "id": payment[0],
+            "order_id": payment[1],
+            "payment_method": payment[2],
+            "amount": payment[3],
+            "payment_date": payment[4],
+        })
+
+    total_count = len(DATABASE.GET_ALL_PAYMENTS)
+    response = jsonify({ "data": final_payments })
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] =f'customers 0-{len(final_payments)}/{total_count}'
+    return response, 200
+
+
+@app.route('/payment', methods=['POST'])
+def create_payment():
+    order_id = request.form.get('order_id')
+    payment_method = request.form.get('payment_method')
+    amount = request.form.get('amount')
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(f"INSERT INTO payments (order_id, payment_method, amount) VALUES (?, ?, ?)", (order_id, payment_method, amount))
+    conn.commit()
+    cur.execute(''' SELECT id from payments order by id DESC LIMIT 1 ''')
+    payment_id = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM payments WHERE id = ?', (payment_id,))
+    payment = cur.fetchone()
+    final_payment = {
+        "id": payment[0],
+        "order_id": payment[1],
+        "payment_method": payment[2],
+        "amount": payment[3],
+        "payment_date": payment[4]}
+    conn.close()
+
+    return jsonify(final_payment), 201
+
+
+@app.route('/payment/<int:id>', methods=['GET'])
+def get_payment_by_id(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM payments WHERE id = ?', (id,))
+    payment = cur.fetchone()
+    final_payment = {
+            "id": payment[0],
+            "order_id": payment[1],
+            "payment_method": payment[2],
+            "amount": payment[3],
+            "payment_date": payment[4],
+        }
+    conn.close()
+    if payment is None:
+        return '', 404
+    return jsonify(final_payment), 200
+
+
+@app.route('/payment/<int:id>', methods=['PUT'])
+def update_payment_by_id(id):
+    order_id = request.form.get('order_id')
+    payment_method = request.form.get('payment_method')
+    amount = request.form.get('amount')
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' UPDATE payments SET order_id = ?, payment_method = ?, amount = ? WHERE id = ? ''', (order_id, payment_method, amount, id,))
+    conn.commit()
+    c.close()
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' SELECT * FROM payments WHERE id = ? ''', (id,))
+    payment = c.fetchone()
+    final_back = {
+        "id": payment[0],
+        "order_id": payment[1],
+        "payment_method": payment[2],
+        "amount": payment[3],
+        # "payment_date": payment[4],
+    }
+    conn.close()
+
+    return jsonify(final_back), 200
+
+
+@app.route('/payment/<int:id>', methods=['DELETE'])
+def delete_payment_by_id(id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' DELETE FROM payments WHERE id = ? ''', (id,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return jsonify({"payment id": id}), 200
+
+
+
+
+# ADDRESS
+@app.route('/address', methods=['GET'])
+def list_address():
+    logging.debug("Received 'GET' request for /addresses")
+    range_str = request.args.get('range')
+    sort_str = request.args.get('sort')
+    filter_str = request.args.get('filter')
+    
+    # Initialize variables for pagination, sorting, and filtering
+    start = 0
+    end = 10 # Default end value, adjust as needed
+    field = 'id' # Default sort field
+    order = 'ASC' # Default sort order
+    filters = {} # Corrected: Initialize filters as an empty dictionary
+    
+    if range_str:
+        range_list = json.loads(range_str)
+        start = range_list[0]
+        end = range_list[1]
+    
+    if sort_str:
+        sort_list = json.loads(sort_str)
+        field = sort_list[0]
+        order = sort_list[1]
+    
+    if filter_str:
+        filters = json.loads(filter_str)
+    
+    conn = sqlite3.connect('db/DATAbase.db')
+    cur = conn.cursor()
+
+    # Corrected: Start with a base query that always evaluates to true
+    query = "SELECT * FROM addresses WHERE 1=1"
+    params = []
+
+    # Apply filters to the query
+    for key, value in filters.items():
+        query += f" AND {key} LIKE '%{value}%'"
+
+    # Add the ORDER BY clause
+    query += f" ORDER BY {field} {order}"
+
+    # Add the LIMIT and OFFSET clauses
+    query += f" LIMIT ? OFFSET ?"
+    params.append(end - start + 1) # Limit
+    params.append(start) # Offset
+
+    # Execute the query with the params
+    print(query, params)
+    cur.execute(query, params)
+
+    # Fetch the customers from the database
+    addresses = cur.fetchall()
+    final_addresses = []
+    
+    # Convert the database records to a list of dictionaries for the response
+    for address in addresses:
+        final_addresses.append({
+            "id": address[0],
+            "order_id": address[1],
+            "recipient_name": address[2],
+            "address": address[3],
+            "state": address[4],
+            "country": address[5],
+            "city": address[6],
+            "postal_code": address[7],
+        })
+
+    total_count = len(DATABASE.GET_ALL_ADDRESSs)
+    response = jsonify({ "data": final_addresses })
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] =f'addresses 0-{len(final_addresses)}/{total_count}'
+    return response, 200
+
+
+@app.route('/address', methods=['POST'])
+def create_address():
+    order_id = request.form.get('order_id')
+    name = request.form.get('recipient_name')
+    address = request.form.get('address')
+    state = request.form.get('state')
+    country = request.form.get('country')
+    city = request.form.get('city')
+    poste = request.form.get('postal_code')
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(''' INSERT INTO addresses(order_id, recipient_name, address, state, country, city, postal_code) VALUES (?, ?, ?, ?, ?, ?, ?)''', (order_id, name, address, state, country, city, poste))
+    conn.commit()
+    cur.execute(''' SELECT id from addresses order by id DESC LIMIT 1 ''')
+    address_id = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM addresses WHERE id = ?', (address_id,))
+    address = cur.fetchone()
+    final_address = {
+        "id": address[0],
+        "order_id": address[1],
+        "recipient_name": address[2],
+        "address": address[3],
+        "state": address[4],
+        "country": address[5],
+        "city": address[6],
+        "postal_code": address[7],
+        }
+    conn.close()
+
+    return jsonify(final_address), 201
+
+
+@app.route('/address/<int:id>', methods=['GET'])
+def get_address_by_id(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM addresses WHERE id = ?', (id,))
+    address = cur.fetchone()
+    final_address = {
+            "id": address[0],
+            "order_id": address[1],
+            "recipient_name": address[2],
+            "address": address[3],
+            "state": address[4],
+            "country": address[5],
+            "city": address[6],
+            "postal_code": address[7],
+        }
+    conn.close()
+    if address is None:
+        return '', 404
+    return jsonify(final_address), 200
+
+
+@app.route('/address/<int:id>', methods=['PUT'])
+def update_address_by_id(id):
+    order_id = request.form.get('order_id')
+    name = request.form.get('recipient_name')
+    address = request.form.get('address')
+    state = request.form.get('state')
+    country = request.form.get('country')
+    city = request.form.get('city')
+    poste = request.form.get('postal_code')
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' UPDATE addresses SET order_id = ?, recipient_name = ?, address = ?, state = ?, country = ?, city = ?, postal_code = ? WHERE id = ? ''', (order_id, name, address, state, country, city, poste, id,))
+    conn.commit()
+    c.close()
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' SELECT * FROM addresses WHERE id = ? ''', (id,))
+    address = c.fetchone()
+    final_back = {
+        "id": address[0],
+        "order_id": address[1],
+        "recipient_name": address[2],
+        "address": address[3],
+        "state": address[4],
+        "country": address[5],
+        "city": address[6],
+        "postal_code": address[7],
+    }
+    conn.close()
+
+    return jsonify(final_back), 200
+
+
+@app.route('/address/<int:id>', methods=['DELETE'])
+def delete_address_by_id(id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' DELETE FROM payments WHERE id = ? ''', (id,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return jsonify({"shipping address id": id}), 200
+
+
+
+
+# ADMINLOG
+@app.route('/adminLog', methods=['GET'])
+def list_admin_log():
+    logging.debug("Received 'GET' request for /admin logs")
+    range_str = request.args.get('range')
+    sort_str = request.args.get('sort')
+    filter_str = request.args.get('filter')
+    
+    # Initialize variables for pagination, sorting, and filtering
+    start = 0
+    end = 10 # Default end value, adjust as needed
+    field = 'id' # Default sort field
+    order = 'ASC' # Default sort order
+    filters = {} # Corrected: Initialize filters as an empty dictionary
+    
+    if range_str:
+        range_list = json.loads(range_str)
+        start = range_list[0]
+        end = range_list[1]
+    
+    if sort_str:
+        sort_list = json.loads(sort_str)
+        field = sort_list[0]
+        order = sort_list[1]
+    
+    if filter_str:
+        filters = json.loads(filter_str)
+    
+    conn = sqlite3.connect('db/DATAbase.db')
+    cur = conn.cursor()
+
+    # Corrected: Start with a base query that always evaluates to true
+    query = "SELECT * FROM adminLogs WHERE 1=1"
+    params = []
+
+    # Apply filters to the query
+    for key, value in filters.items():
+        query += f" AND {key} LIKE '%{value}%'"
+
+    # Add the ORDER BY clause
+    query += f" ORDER BY {field} {order}"
+
+    # Add the LIMIT and OFFSET clauses
+    query += f" LIMIT ? OFFSET ?"
+    params.append(end - start + 1) # Limit
+    params.append(start) # Offset
+
+    # Execute the query with the params
+    print(query, params)
+    cur.execute(query, params)
+
+    # Fetch the customers from the database
+    logs = cur.fetchall()
+    final_logs = []
+    
+    # Convert the database records to a list of dictionaries for the response
+    for log in logs:
+        user_name = get_user_name_by_id(log[1])
+        final_logs.append({
+            "id": log[0],
+            "user_id": log[1],
+            "user_name": user_name,
+            "action": log[2],
+            "action_date": log[3],
+            "ip_address": log[4],
+        })
+
+    total_count = len(DATABASE.GET_ALL_ADMIN_LOGS)
+    response = jsonify({ "data": final_logs })
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] =f'addresses 0-{len(final_logs)}/{total_count}'
+    return response, 200
+
+
+@app.route('/adminLog', methods=['POST'])
+def create_admin_log():
+    user_id = request.form.get('user_id')
+    action = request.form.get('action')
+    ip = request.form.get('ip_address')
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?)''', (user_id, action, ip))
+    conn.commit()
+    cur.execute(''' SELECT id from adminLogs order by id DESC LIMIT 1 ''')
+    Log_id = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM adminLogs WHERE id = ?', (Log_id,))
+    adminLog = cur.fetchone()
+    final_address = {
+        "id": adminLog[0],
+        "user_id": adminLog[1],
+        "action": adminLog[2],
+        "ip_address": adminLog[4],
+        }
+    conn.close()
+
+    return jsonify(final_address), 201
+
+
+@app.route('/adminLog/<int:id>', methods=['GET'])
+def get_admin_log_by_id(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM adminLogs WHERE id = ?', (id,))
+    adminLog = cur.fetchone()
+    user_name = get_user_name_by_id(adminLog[1])
+    final_adminLog = {
+        "id": adminLog[0],
+        "user_id": adminLog[1],
+        "user_name": user_name,
+        "action": adminLog[2],
+        "action_date": adminLog[3],
+        "ip_address": adminLog[4],
+        }
+    conn.close()
+    if adminLog is None:
+        return '', 404
+    return jsonify(final_adminLog), 200
+
+
+@app.route('/adminLog/<int:id>', methods=['PUT'])
+def update_admin_log_by_id(id):
+    user_id = request.form.get('user_id')
+    action = request.form.get('action')
+    ip = request.form.get('ip_address')
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' UPDATE adminLogs SET user_id = ?, action = ?, ip_address = ? WHERE id = ? ''', (user_id, action, ip, id))
+    conn.commit()
+    c.close()
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' SELECT * FROM adminLogs WHERE id = ? ''', (id,))
+    address = c.fetchone()
+    final_back = {
+        "id": address[0],
+        "user_id": address[1],
+        "action": address[2],
+        "ip_address": address[4],
+    }
+    conn.close()
+
+    return jsonify(final_back), 200
+
+
+@app.route('/adminLog/<int:id>', methods=['DELETE'])
+def delete_admin_log_by_id(id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' DELETE FROM adminLogs WHERE id = ? ''', (id,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return jsonify({"admin log id": id}), 200
+
+
+
+
+# FEEDBACK
+@app.route('/feedback', methods=['GET'])
+def list_feedback():
+    logging.debug("Received 'GET' request for /addresses")
+    range_str = request.args.get('range')
+    sort_str = request.args.get('sort')
+    filter_str = request.args.get('filter')
+    
+    # Initialize variables for pagination, sorting, and filtering
+    start = 0
+    end = 10 # Default end value, adjust as needed
+    field = 'id' # Default sort field
+    order = 'ASC' # Default sort order
+    filters = {} # Corrected: Initialize filters as an empty dictionary
+    
+    if range_str:
+        range_list = json.loads(range_str)
+        start = range_list[0]
+        end = range_list[1]
+    
+    if sort_str:
+        sort_list = json.loads(sort_str)
+        field = sort_list[0]
+        order = sort_list[1]
+    
+    if filter_str:
+        filters = json.loads(filter_str)
+    
+    conn = sqlite3.connect('db/DATAbase.db')
+    cur = conn.cursor()
+
+    # Corrected: Start with a base query that always evaluates to true
+    query = "SELECT * FROM addresses WHERE 1=1"
+    params = []
+
+    # Apply filters to the query
+    for key, value in filters.items():
+        query += f" AND {key} LIKE '%{value}%'"
+
+    # Add the ORDER BY clause
+    query += f" ORDER BY {field} {order}"
+
+    # Add the LIMIT and OFFSET clauses
+    query += f" LIMIT ? OFFSET ?"
+    params.append(end - start + 1) # Limit
+    params.append(start) # Offset
+
+    # Execute the query with the params
+    print(query, params)
+    cur.execute(query, params)
+
+    # Fetch the customers from the database
+    addresses = cur.fetchall()
+    final_addresses = []
+    
+    # Convert the database records to a list of dictionaries for the response
+    for address in addresses:
+        final_addresses.append({
+            "id": address[0],
+            "order_id": address[1],
+            "recipient_name": address[2],
+            "address": address[3],
+            "state": address[4],
+            "country": address[5],
+            "city": address[6],
+            "postal_code": address[7],
+        })
+
+    total_count = len(DATABASE.GET_ALL_ADDRESSs)
+    response = jsonify({ "data": final_addresses })
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] =f'addresses 0-{len(final_addresses)}/{total_count}'
+    return response, 200
+
+
+@app.route('/feedback', methods=['POST'])
+def create_feedback():
+    order_id = request.form.get('order_id')
+    name = request.form.get('recipient_name')
+    address = request.form.get('address')
+    state = request.form.get('state')
+    country = request.form.get('country')
+    city = request.form.get('city')
+    poste = request.form.get('postal_code')
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(''' INSERT INTO addresses(order_id, recipient_name, address, state, country, city, postal_code) VALUES (?, ?, ?, ?, ?, ?, ?)''', (order_id, name, address, state, country, city, poste))
+    conn.commit()
+    cur.execute(''' SELECT id from addresses order by id DESC LIMIT 1 ''')
+    address_id = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM addresses WHERE id = ?', (address_id,))
+    address = cur.fetchone()
+    final_address = {
+        "id": address[0],
+        "order_id": address[1],
+        "recipient_name": address[2],
+        "address": address[3],
+        "state": address[4],
+        "country": address[5],
+        "city": address[6],
+        "postal_code": address[7],
+        }
+    conn.close()
+
+    return jsonify(final_address), 201
+
+
+@app.route('/feedback/<int:id>', methods=['GET'])
+def get_feedback_by_id(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM addresses WHERE id = ?', (id,))
+    address = cur.fetchone()
+    final_address = {
+            "id": address[0],
+            "order_id": address[1],
+            "recipient_name": address[2],
+            "address": address[3],
+            "state": address[4],
+            "country": address[5],
+            "city": address[6],
+            "postal_code": address[7],
+        }
+    conn.close()
+    if address is None:
+        return '', 404
+    return jsonify(final_address), 200
+
+
+@app.route('/feedback/<int:id>', methods=['PUT'])
+def update_feedback_by_id(id):
+    order_id = request.form.get('order_id')
+    name = request.form.get('recipient_name')
+    address = request.form.get('address')
+    state = request.form.get('state')
+    country = request.form.get('country')
+    city = request.form.get('city')
+    poste = request.form.get('postal_code')
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' UPDATE addresses SET order_id = ?, recipient_name = ?, address = ?, state = ?, country = ?, city = ?, postal_code = ? WHERE id = ? ''', (order_id, name, address, state, country, city, poste, id,))
+    conn.commit()
+    c.close()
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' SELECT * FROM addresses WHERE id = ? ''', (id,))
+    address = c.fetchone()
+    final_back = {
+        "id": address[0],
+        "order_id": address[1],
+        "recipient_name": address[2],
+        "address": address[3],
+        "state": address[4],
+        "country": address[5],
+        "city": address[6],
+        "postal_code": address[7],
+    }
+    conn.close()
+
+    return jsonify(final_back), 200
+
+
+@app.route('/feedback/<int:id>', methods=['DELETE'])
+def delete_feedback_by_id(id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' DELETE FROM feedbacks WHERE id = ? ''', (id,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return jsonify({"feedback id": id}), 200
+
+
+
+
+# ORDERS
+@app.route('/order', methods=['GET'])
+def list_order():
+    logging.debug("Received 'GET' request for /orders")
+    range_str = request.args.get('range')
+    sort_str = request.args.get('sort')
+    filter_str = request.args.get('filter')
+    
+    # Initialize variables for pagination, sorting, and filtering
+    start = 0
+    end = 10 # Default end value, adjust as needed
+    field = 'id' # Default sort field
+    order = 'ASC' # Default sort order
+    filters = {} # Corrected: Initialize filters as an empty dictionary
+    
+    if range_str:
+        range_list = json.loads(range_str)
+        start = range_list[0]
+        end = range_list[1]
+    
+    if sort_str:
+        sort_list = json.loads(sort_str)
+        field = sort_list[0]
+        order = sort_list[1]
+    
+    if filter_str:
+        filters = json.loads(filter_str)
+    
+    conn = sqlite3.connect('db/DATAbase.db')
+    cur = conn.cursor()
+
+    # Corrected: Start with a base query that always evaluates to true
+    query = "SELECT * FROM orders WHERE 1=1"
+    params = []
+
+    # Apply filters to the query
+    for key, value in filters.items():
+        query += f" AND {key} LIKE '%{value}%'"
+
+    # Add the ORDER BY clause
+    query += f" ORDER BY {field} {order}"
+
+    # Add the LIMIT and OFFSET clauses
+    query += f" LIMIT ? OFFSET ?"
+    params.append(end - start + 1) # Limit
+    params.append(start) # Offset
+
+    # Execute the query with the params
+    print(query, params)
+    cur.execute(query, params)
+
+    # Fetch the customers from the database
+    orders = cur.fetchall()
+    final_orders = []
+    
+    # Convert the database records to a list of dictionaries for the response
+    for order in orders:
+        final_orders.append({
+            "id": order[0],
+            "customer_id": order[1],
+            "order_date": order[2],
+            "total_amount": order[3],
+            "status": order[4],
+        })
+
+    total_count = len(DATABASE.GET_ALL_ORDERS)
+    response = jsonify({ "data": final_orders })
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
+    response.headers['Content-Range'] =f'addresses 0-{len(final_orders)}/{total_count}'
+    return response, 200
+
+
+@app.route('/order', methods=['POST'])
+def create_order():
+    customer_id = request.form.get('customer_id')
+    amount = request.form.get('total_amount')
+    status = request.form.get('status')
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' INSERT INTO orders (customer_id, total_amount, status) VALUES (?, ?, ?) ''', (customer_id, amount, status))
+    conn.commit()
+
+    c.execute(''' SELECT * FROM orders ORDER BY id DESC LIMIT 1 ''')
+    order_id = ''
+    result = c.fetchone()
+    if result is not None:
+        order_id = result[0]
+    c.close()
+    conn.close()
+
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM orders WHERE id = ?', (order_id,))
+    order = cur.fetchone()
+    final_order = {
+        "id": order[0],
+        "customer_id": order[1],
+        # "order_date": order[2],
+        "total_amount": order[3],
+        "status": order[4],
+        }
+    conn.close()
+
+    return jsonify(final_order), 201
+
+
+@app.route('/order/<int:id>', methods=['GET'])
+def get_order_by_id(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM orders WHERE id = ?', (id,))
+    order = cur.fetchone()
+    final_order = {
+        "id": order[0],
+        "customer_id": order[1],
+        # "order_date": order[2],
+        "total_amount": order[3],
+        "status": order[4],
+        }
+    conn.close()
+    if order is None:
+        return '', 404
+    return jsonify(final_order), 200
+
+
+@app.route('/order/<int:id>', methods=['PUT'])
+def update_order_by_id(id):
+    customer_id = request.form.get('customer_id')
+    amount = request.form.get('total_amount')
+    status = request.form.get('status')
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' UPDATE orders SET customer_id = ?, total_amount = ?, status = ? WHERE id = ? ''', (customer_id, amount, status, id,))
+    conn.commit()
+    c.close()
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' SELECT * FROM orders WHERE id = ? ''', (id,))
+    order = c.fetchone()
+    final_order = {
+        "id": order[0],
+        "customer_id": order[1],
+        "order_date": order[2],
+        "total_amount": order[3],
+        "status": order[4],
+    }
+    conn.close()
+
+    return jsonify(final_order), 200
+
+
+@app.route('/order/<int:id>', methods=['DELETE'])
+def delete_order_by_id(id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(''' DELETE FROM orders WHERE id = ? ''', (id,))
+    conn.commit()
+    c.close()
+    conn.close()
+    return jsonify({"order id": id}), 200
+
+
+# ------------------------ ADMIN END ------------------------------------
+
+
 
 
 
@@ -989,12 +1949,12 @@ def check_out_add_order():
 
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute(''' INSERT INTO addresses (recipient_name, address, state, country, city, postal_code) VALUES 
-                            (?, ?, ?, ?, ?, ?) ''', (reciepient_name, address_lineOne, state, country, city, postal_code))
+        cur.execute(''' INSERT INTO addresses (order_id, recipient_name, address, state, country, city, postal_code) VALUES 
+                            (?, ?, ?, ?, ?, ? ,?) ''', (order_id, reciepient_name, address_lineOne, state, country, city, postal_code))
         conn.commit()
 
 
-        cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
+        cur.execute(''' SELECT id FROM orders ORDER BY id DESC LIMIT 1 ''')
         order_id = cur.fetchone()[0]
         cur.close()
         conn.close()
@@ -1035,8 +1995,6 @@ def check_out_add_order():
     
     if request.method == "PUT": 
 
-
-
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(''' INSERT INTO orders (customer_id, total_amount, status) VALUES 
@@ -1047,12 +2005,12 @@ def check_out_add_order():
 
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute(''' INSERT INTO addresses (recipient_name, address, state, country, city, postal_code) VALUES 
-                            (?, ?, ?, ?, ?, ?) ''', (reciepient_name, address_lineOne, state, country, city, postal_code))
+        cur.execute(''' INSERT INTO addresses (order_id, recipient_name, address, state, country, city, postal_code) VALUES 
+                            (?, ?, ?, ?, ?, ?, ?) ''', (order_id, reciepient_name, address_lineOne, state, country, city, postal_code))
         conn.commit()
 
 
-        cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
+        cur.execute(''' SELECT id FROM orders ORDER BY id DESC LIMIT 1 ''')
         order_id = cur.fetchone()[0]
         cur.close()
         conn.close()
@@ -1096,7 +2054,7 @@ def check_out_add_order():
 def get_invoice(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(''' SELECT * FROM orders WHERE order_id = ? ''', (id,))
+    cur.execute(''' SELECT * FROM orders WHERE id = ? ''', (id,))
     order = cur.fetchone()
     if order:
         finall = [{
@@ -1116,7 +2074,7 @@ def rate_and_comment():
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(''' SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1 ''')
+    cur.execute(''' SELECT id FROM orders ORDER BY id DESC LIMIT 1 ''')
     order_id = cur.fetchone()[0]
     cur.close()
     conn.close()
@@ -1210,7 +2168,7 @@ def get_customer_by_id_profile(id):
 def ordersIngageCustomer(id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(''' SELECT * from orders WHERE (status = 'pending' OR status = 'sent') AND customer_id = ? GROUP BY order_id ''', (id,))
+    cur.execute(''' SELECT * from orders WHERE (status = 'pending' OR status = 'sent') AND customer_id = ? GROUP BY id ''', (id,))
     orders = cur.fetchall()
     finall_orders = []
     for order in orders: 
