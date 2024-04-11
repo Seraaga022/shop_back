@@ -46,7 +46,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS orderDetails
               order_id INT NOT NULL,
               product_id INT NOT NULL, 
               quantity INT NOT NULL,
-              unit_price DECIMAL(10,2) NOT NULL)''')
+              price DECIMAL(10,2) NOT NULL)''')
 
 # create categories table
 c.execute('''CREATE TABLE IF NOT EXISTS categories
@@ -60,10 +60,11 @@ c.execute('''CREATE TABLE IF NOT EXISTS categories
 # create users table
 c.execute('''CREATE TABLE IF NOT EXISTS users
              (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+              name TEXT NOT NULL,
               username VARCHAR(50) NOT NULL, 
               password_hash VARCHAR(100) NOT NULL,
-              email VARCHAR(100) NOT NULL, 
-              role VARCHAR(20) NOT NULL)''')
+              email VARCHAR(100) NOT NULL,
+              image TEXT NOT NULL)''')
 
 # create payments table
 c.execute('''CREATE TABLE IF NOT EXISTS payments
@@ -92,7 +93,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS adminLogs
 
 # in the cart_id and created_at, updated_at; dont put anything in these; never.
 c.execute('''CREATE TABLE IF NOT EXISTS cart (
-             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
              customer_id INTEGER NOT NULL,
              product_id INTEGER NOT NULL,
              quantity INTEGER NOT NULL DEFAULT 1,
@@ -217,3 +218,5 @@ c.execute('SELECT * FROM adminAns')
 GET_ALL_ADMIN_ANSs = c.fetchall() 
 c.execute('SELECT * FROM adminLogs')
 GET_ALL_ADMIN_LOGS = c.fetchall() 
+c.execute('SELECT * FROM users')
+GET_ALL_USERS = c.fetchall() 
