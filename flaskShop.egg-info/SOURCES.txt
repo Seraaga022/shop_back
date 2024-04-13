@@ -1,6 +1,0 @@
-setup.py
-flaskShop.egg-info/PKG-INFO
-flaskShop.egg-info/SOURCES.txt
-flaskShop.egg-info/dependency_links.txt
-flaskShop.egg-info/requires.txt
-flaskShop.egg-info/top_level.txt
