@@ -1,0 +1,7 @@
+{
+  "platform": "flask",
+  "app": "flask-starter",
+  "flask": {
+    "pythonVersion": "3.10"
+  }
+}
