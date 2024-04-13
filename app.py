@@ -15,6 +15,8 @@ import time
 import hashlib
 
 
+import __init__
+
 app = Flask(__name__)
 CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -3666,6 +3668,4 @@ def error(e):
     return render_template('404.html'), 404   
 
 if __name__ == '__main__':
-    # app.run(debug=True)
-    app.run()
-
+    app.run(debug=True)
