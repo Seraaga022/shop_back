@@ -1,7 +1,9 @@
+aider==0.2.4
 blinker==1.7.0
 build==1.2.1
 click==8.1.7
 colorama==0.4.6
+configparser==6.0.1
 Flask==3.0.2
 Flask-Cors==4.0.0
 Flask-SQLAlchemy==3.1.1
@@ -13,6 +15,8 @@ MarkupSafe==2.1.5
 packaging==24.0
 pillow==10.2.0
 pyproject_hooks==1.0.0
+setuptools==69.2.0
 SQLAlchemy==2.0.28
 typing_extensions==4.10.0
+waitress==3.0.0
 Werkzeug==3.0.1
