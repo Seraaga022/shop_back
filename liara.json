@@ -2,10 +2,15 @@
   "platform": "flask",
   "web": "gunicorn app:app",
   "build": {
-     "command": "pip install -r requirements.txt"
+    "command": "pip install -r requirements.txt"
   },
   "deploy": {
-     "command": "gunicorn app:app"
-  }
- }
- 
+    "command": "gunicorn app:app"
+  },
+  "disks": [
+    {
+      "name": "backend-shop",
+      "mountTo": "usr/src/app"
+    }
+  ]
+}

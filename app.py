@@ -22,7 +22,7 @@ CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 logging.basicConfig(level=logging.INFO)
 # app.config['SECRET_KEY'] = 'its my very secret password that no one supposed to know'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db/DATAbase.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///DATAbase.db'
 # logging.getLogger('flask_cors').level = logging.DEBUG
 
 
@@ -95,7 +95,7 @@ def Check_out_info(id):
 
 @app.route('/Pcategories', methods=["GET"])
 def get_parent_categories():
-    conn = sqlite3.Connection('db/DATAbase.db')
+    conn = sqlite3.Connection('DATAbase.db')
     c = conn.cursor()
     c.execute("SELECT * FROM categories where parent_category_id IS NULL")
     PARENT_CATEGORIES = c.fetchall()
@@ -165,7 +165,7 @@ def get_sub_category_by_id(sub_cat_id):
 @app.route('/products', methods=['GET'])
 def get_products_for_customer():
     final_products = []
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM products")
         GET_ALL_PRODUCTS = c.fetchall()
@@ -192,7 +192,7 @@ def get_products_for_customer():
 @app.route('/searchProducts', methods=['GET'])
 def get_products_for_customer_search():
     final_products = []
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM products")
         GET_ALL_PRODUCTS = c.fetchall()
@@ -222,7 +222,7 @@ def test_back_end():
     return jsonify('ok')
 
 def get_db_connection():
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -444,7 +444,7 @@ def save_image_as_png(image_file, save_path):
 # admin_name = request.headers.get('X-Admin-Name')
 # admin_id = request.headers.get('X-Admin-Id')
 # client_ip = request.remote_addr
-# connection = sqlite3.Connection('db/DATAbase.db')
+# connection = sqlite3.Connection('DATAbase.db')
 # cursor = connection.cursor()
 # cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, '', client_ip))
 # connection.commit()
@@ -466,7 +466,7 @@ def handle_admin_login():
         with open(f'static/admin_img/{admin[5]}', 'rb') as image_file:
             encoded_str = base64.b64encode(image_file.read()).decode('utf-8')
 
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin[0], 'loged in', client_ip))
         connection.commit()
@@ -520,7 +520,7 @@ def list_customer():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -555,7 +555,7 @@ def list_customer():
             "phone": customer[3],
         })
 
-    connectionForGettingAllStuff = sqlite3.Connection('db/DATAbase.db')
+    connectionForGettingAllStuff = sqlite3.Connection('DATAbase.db')
     cursorForGettingAllStuff = connectionForGettingAllStuff.cursor()
     cursorForGettingAllStuff.execute(''' SELECT * FROM customers ''')
     total_count = len(cursorForGettingAllStuff.fetchall())
@@ -563,7 +563,7 @@ def list_customer():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] = f'customers 0-{len(final_customers)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all customers', client_ip))
     connection.commit()
@@ -584,7 +584,7 @@ def create_customer():
     
 
     if user_exists(phone, name):
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'tried to create an existing customer', client_ip))
         connection.commit()
@@ -608,7 +608,7 @@ def create_customer():
         customer_id = cur.fetchone()[0]
         conn.close()
 
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created customer with custom image, id of: {customer_id}', client_ip))
         connection.commit()
@@ -622,7 +622,7 @@ def create_customer():
         customer_id = cur.fetchone()[0]
         conn.close()
 
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created customer with default image, id of: {customer_id}', client_ip))
         connection.commit()
@@ -655,7 +655,7 @@ def get_customer_by_id(id):
     conn.close()
 
     if final_customer is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get not existing customer `{id}`', client_ip))
         connection.commit()
@@ -663,7 +663,7 @@ def get_customer_by_id(id):
         
         return '', 404
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got customer with id of: {id}', client_ip))
     connection.commit()
@@ -719,7 +719,7 @@ def update_customer_by_id(id):
         updated =  get_customer(id)
 
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'customer with id of: {id} updated', client_ip))
     connection.commit()
@@ -736,7 +736,7 @@ def delete_customer_by_id(id):
     
     delete_customer(id)
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'customer with id of: {id} deleted', client_ip))
     connection.commit()
@@ -778,7 +778,7 @@ def list_category():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -817,7 +817,7 @@ def list_category():
         })
 
         
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM categories")
         GET_ALL_CATEGORIES = c.fetchall()
@@ -827,7 +827,7 @@ def list_category():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'customers 0-{len(final_categories)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all categories', client_ip))
     connection.commit()
@@ -863,7 +863,7 @@ def create_category():
         cur.close()
         conn.close()
 
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created sub category with id of: {category_id} and parent id of: {parent_category_id}', client_ip))
         connection.commit()
@@ -890,7 +890,7 @@ def create_category():
     }
     conn.close()
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created parent category with id of: {category[0]}', client_ip))
     connection.commit()
@@ -905,7 +905,7 @@ def get_category_by_id(id):
     client_ip = request.remote_addr
     category = get_category(id)
     if category is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get an not existing category with id of: `{id}`', client_ip))
         connection.commit()
@@ -913,7 +913,7 @@ def get_category_by_id(id):
 
         return '', 404
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got category with id of: {id}', client_ip))
     connection.commit()
@@ -986,7 +986,7 @@ def update_category_by_id(id):
     else:
         updated = update_category(name, description, parent_category_id, id)
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'category with id of: {id} updated', client_ip))
     connection.commit()
@@ -1003,7 +1003,7 @@ def delete_category_by_id(id):
 
     delete_category(id)
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got category with id of: {id}', client_ip))
     connection.commit()
@@ -1046,7 +1046,7 @@ def list_product():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -1084,7 +1084,7 @@ def list_product():
         })
 
 
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM products")
         GET_ALL_PRODUCTS = c.fetchall()
@@ -1094,7 +1094,7 @@ def list_product():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'customers 0-{len(final_products)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all products', client_ip))
     connection.commit()
@@ -1131,7 +1131,7 @@ def create_product():
     cur.close()
     conn.close()
 
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
     cur.execute('SELECT * FROM products WHERE id = ?', (product_id,))
     product = cur.fetchone()
@@ -1148,7 +1148,7 @@ def create_product():
     conn.close()
 
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created product with id of: {product_id}', client_ip))
     connection.commit()
@@ -1177,7 +1177,7 @@ def get_product_by_id(product_id):
         }
     conn.close()
     if product is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get an not existing product with id of: `{product_id}`', client_ip))
         connection.commit()
@@ -1185,7 +1185,7 @@ def get_product_by_id(product_id):
 
         return '', 404
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got product with id of: {product_id}', client_ip))
     connection.commit()
@@ -1266,7 +1266,7 @@ def update_product_by_id(id):
 
 
 
-    connection = sqlite3.connect('db/DATAbase.db')
+    connection = sqlite3.connect('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'product with id of: {id} updated', client_ip))
     connection.commit()
@@ -1283,7 +1283,7 @@ def delete_product_by_id(product_id):
     
     delete_product(product_id)
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'product with id of: {product_id} deleted', client_ip))
     connection.commit()
@@ -1326,7 +1326,7 @@ def list_payment():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -1364,7 +1364,7 @@ def list_payment():
         })
 
 
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM payments")
         GET_ALL_PAYMENTS = c.fetchall()
@@ -1374,7 +1374,7 @@ def list_payment():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'customers 0-{len(final_payments)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all payments', client_ip))
     connection.commit()
@@ -1415,7 +1415,7 @@ def create_payment():
         "payment_date": payment[4]}
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created payment with id of: {payment_id}', client_ip))
     connection.commit()
@@ -1443,7 +1443,7 @@ def get_payment_by_id(id):
         }
     conn.close()
     if payment is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get payment with id of: `{id}`', client_ip))
         connection.commit()
@@ -1451,7 +1451,7 @@ def get_payment_by_id(id):
         
         return '', 404
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got payment with id of: {id}', client_ip))
     connection.commit()
@@ -1488,7 +1488,7 @@ def update_payment_by_id(id):
     }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'payment with id of: {id} updated', client_ip))
     connection.commit()
@@ -1510,7 +1510,7 @@ def delete_payment_by_id(id):
     c.close()
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'payment with id of: {id} deleted', client_ip))
     connection.commit()
@@ -1553,7 +1553,7 @@ def list_address():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -1594,7 +1594,7 @@ def list_address():
         })
 
 
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM addresses")
         GET_ALL_ADDRESSs = c.fetchall()
@@ -1604,7 +1604,7 @@ def list_address():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'addresses 0-{len(final_addresses)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all addresses', client_ip))
     connection.commit()
@@ -1653,7 +1653,7 @@ def create_address():
         }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created address with id of: {address_id}', client_ip))
     connection.commit()
@@ -1684,7 +1684,7 @@ def get_address_by_id(id):
         }
     conn.close()
     if address is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get not existing address with id of: `{id}`', client_ip))
         connection.commit()
@@ -1692,7 +1692,7 @@ def get_address_by_id(id):
         
         return '', 404
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got address with id of: {id}', client_ip))
     connection.commit()
@@ -1737,7 +1737,7 @@ def update_address_by_id(id):
     }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'address with id of: {id} updated', client_ip))
     connection.commit()
@@ -1759,7 +1759,7 @@ def delete_address_by_id(id):
     c.close()
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'address with id of: {id} deleted', client_ip))
     connection.commit()
@@ -1803,7 +1803,7 @@ def list_admin_log():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -1842,7 +1842,7 @@ def list_admin_log():
             "ip_address": log[4],
         })
 
-    connectionForGettingAllStuff = sqlite3.Connection('db/DATAbase.db')
+    connectionForGettingAllStuff = sqlite3.Connection('DATAbase.db')
     cursorForGettingAllStuff = connectionForGettingAllStuff.cursor()
     cursorForGettingAllStuff.execute(''' SELECT * FROM adminLogs ''')
     total_count = len(cursorForGettingAllStuff.fetchall())
@@ -1850,7 +1850,7 @@ def list_admin_log():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'addresses 0-{len(final_logs)}/{total_count}'
 
-    # connection = sqlite3.Connection('db/DATAbase.db')
+    # connection = sqlite3.Connection('DATAbase.db')
     # cursor = connection.cursor()
     # cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all admin-logs', client_ip))
     # connection.commit()
@@ -1891,7 +1891,7 @@ def create_admin_log():
         }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created admin-log with id of: {Log_id}', client_ip))
     connection.commit()
@@ -1921,7 +1921,7 @@ def get_admin_log_by_id(id):
         }
     conn.close()
     if adminLog is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get not existing admin-log with id of: `{id}`', client_ip))
         connection.commit()
@@ -1929,7 +1929,7 @@ def get_admin_log_by_id(id):
         
         return '', 404
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got admin-log with id of: {id}', client_ip))
     connection.commit()
@@ -1966,7 +1966,7 @@ def update_admin_log_by_id(id):
     }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'admin-log with id of: {id} updated', client_ip))
     connection.commit()
@@ -1988,7 +1988,7 @@ def delete_admin_log_by_id(id):
     c.close()
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'admin-log with id of: {id} deleted', client_ip))
     connection.commit()
@@ -2031,7 +2031,7 @@ def list_feedback():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -2080,7 +2080,7 @@ def list_feedback():
         })
 
 
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM feedbacks")
         GET_ALL_FEEDBACKS  = c.fetchall()
@@ -2090,7 +2090,7 @@ def list_feedback():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'feedbacks 0-{len(final_feedbacks)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all feedbacks', client_ip))
     connection.commit()
@@ -2133,7 +2133,7 @@ def create_feedback():
         }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created feedback with id of: {feedback_id}', client_ip))
     connection.commit()
@@ -2163,7 +2163,7 @@ def get_feedback_by_id(id):
     }
     conn.close()
     if feedback is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get not existing feedback with id of: `{id}`', client_ip))
         connection.commit()
@@ -2171,7 +2171,7 @@ def get_feedback_by_id(id):
         
         return '', 404
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got feedback with id of: {id}', client_ip))
     connection.commit()
@@ -2208,7 +2208,7 @@ def update_feedback_by_id(id):
     conn.close()
     c.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'feedback with id of: {id} updated', client_ip))
     connection.commit()
@@ -2230,7 +2230,7 @@ def delete_feedback_by_id(id):
     c.close()
     conn.close()
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'feedback with id of: {id} deleted', client_ip))
     connection.commit()
@@ -2272,7 +2272,7 @@ def list_order():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -2300,7 +2300,7 @@ def list_order():
     final_orders = []
     
     # Convert the database records to a list of dictionaries for the response
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
     for order in orders:
         cur.execute(''' SELECT SUM(quantity) FROM orderDetails WHERE order_id = ? ''', (order[0],))
@@ -2322,7 +2322,7 @@ def list_order():
     conn.close()
 
 
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM orders")
         GET_ALL_ORDERS = c.fetchall()
@@ -2332,7 +2332,7 @@ def list_order():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'addresses 0-{len(final_orders)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all orders', client_ip))
     connection.commit()
@@ -2377,7 +2377,7 @@ def create_order():
         }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created order with id of: {order_id}', client_ip))
     connection.commit()
@@ -2405,7 +2405,7 @@ def get_order_by_id(id):
         }
     conn.close()
     if order is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get not existing order with id of: {id}', client_ip))
         connection.commit()
@@ -2413,7 +2413,7 @@ def get_order_by_id(id):
         
         return '', 404
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got order with id of: {id}', client_ip))
     connection.commit()
@@ -2449,7 +2449,7 @@ def update_order_by_id(id):
     }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'order with id of: {id} updated', client_ip))
     connection.commit()
@@ -2471,7 +2471,7 @@ def delete_order_by_id(id):
     c.close()
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'order with id of: {id} deleted', client_ip))
     connection.commit()
@@ -2513,7 +2513,7 @@ def list_OD():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -2549,7 +2549,7 @@ def list_OD():
         })
 
 
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM orderDetails")
         GET_ALL_ORDERDETAILS = c.fetchall()
@@ -2559,7 +2559,7 @@ def list_OD():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'addresses 0-{len(final_OD)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all order-details', client_ip))
     connection.commit()
@@ -2593,7 +2593,7 @@ def create_OD():
         "price": OD[4],
         }
         
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created admin-log with id of: {OD[0]}', client_ip))
     connection.commit()
@@ -2622,7 +2622,7 @@ def get_OD_by_id(id):
     conn.close()
 
     if OD is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get not existing order-details with id of: `{id}`', client_ip))
         connection.commit()
@@ -2630,7 +2630,7 @@ def get_OD_by_id(id):
         
         return '', 404
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got order-detail with id of: {id}', client_ip))
     connection.commit()
@@ -2667,7 +2667,7 @@ def update_OD_by_id(id):
     }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'order-detail with id of: {id} updadted', client_ip))
     connection.commit()
@@ -2689,7 +2689,7 @@ def delete_OD_by_id(id):
     c.close()
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'order-detail with id of: {id} deleted', client_ip))
     connection.commit()
@@ -2731,7 +2731,7 @@ def list_user():
     if filter_str:
         filters = json.loads(filter_str)
     
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     # Corrected: Start with a base query that always evaluates to true
@@ -2770,7 +2770,7 @@ def list_user():
         })
 
 
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM users")
         GET_ALL_USERS = c.fetchall()
@@ -2780,7 +2780,7 @@ def list_user():
     response.headers['Access-Control-Expose-Headers'] = 'Content-Range'
     response.headers['Content-Range'] =f'customers 0-{len(final_users)}/{total_count}'
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got all admins', client_ip))
     connection.commit()
@@ -2820,7 +2820,7 @@ def create_user():
         cur.close()
         conn.close()
 
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created admin with default image, id of: {user_id}', client_ip))
         connection.commit()
@@ -2834,7 +2834,7 @@ def create_user():
         cur.close()
         conn.close()
 
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'created admin with custom image, id of: {user_id}', client_ip))
         connection.commit()
@@ -2878,7 +2878,7 @@ def get_user_by_id(id):
     conn.close()
 
     if user is None:
-        connection = sqlite3.Connection('db/DATAbase.db')
+        connection = sqlite3.Connection('DATAbase.db')
         cursor = connection.cursor()
         cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'tried to get admin with id of: `{id}`', client_ip))
         connection.commit()
@@ -2886,7 +2886,7 @@ def get_user_by_id(id):
 
         return '', 404
     
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'got admin with id of: {id}', client_ip))
     connection.commit()
@@ -2960,7 +2960,7 @@ def update_user_by_id(id):
     }
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'admin with id of: {user[0]} updated', client_ip))
     connection.commit()
@@ -2981,7 +2981,7 @@ def delete_user_by_id(id):
     c.close()
     conn.close()
 
-    connection = sqlite3.Connection('db/DATAbase.db')
+    connection = sqlite3.Connection('DATAbase.db')
     cursor = connection.cursor()
     cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, f'admin with id of: {id} deleted', client_ip))
     connection.commit()
@@ -3004,8 +3004,7 @@ def KPI():
     revenue_by_date = []
     top_products_data = [] 
     
-    # with sqlite3.connect('db/DATAbase.db', timeout=10) as conn:
-    with sqlite3.connect('db/DATAbase.db') as conn:
+    with sqlite3.connect('DATAbase.db') as conn:
         c = conn.cursor()
 
         # total_sales = c.fetchone()
@@ -3042,15 +3041,6 @@ def KPI():
 
         c.close()
         conn.commit()
-
-    # connection = sqlite3.connect('db/DATAbase.db')
-    # cursor = connection.cursor()
-    # cursor.execute(''' INSERT INTO adminLogs (user_id, action, ip_address) VALUES (?, ?, ?) ''', (admin_id, 'got total number of orders, revenue and top3 products for key preformance indicators', client_ip) )
-    # connection.commit()
-    # cursor.close()
-    # connection.close()
-    # print('kpi called')
-
 
     return jsonify({
         "total_sales": total_sales_data,
@@ -3590,7 +3580,7 @@ def ordersHistoryCustomer(id):
 
 @app.route('/updatedStatusOrder/<id>', methods=["GET"])
 def updatedStatusOrder(id):
-    conn = sqlite3.Connection('db/DATAbase.db')
+    conn = sqlite3.Connection('DATAbase.db')
     cur = conn.cursor()
     cur.execute(f''' SELECT id, order_id, new_status
                     FROM order_status_history
@@ -3608,7 +3598,7 @@ def updatedStatusOrder(id):
 
 @app.route('/FeedAnsR/<id>', methods=["GET"])
 def ans_feedback_customer(id):
-    conn = sqlite3.Connection('db/DATAbase.db')
+    conn = sqlite3.Connection('DATAbase.db')
     c = conn.cursor()
     c.execute(''' SELECT *, feedbacks.comment, feedbacks.feedback_date, feedbacks.rating  FROM adminAns JOIN feedbacks ON feedbacks.id = adminAns.feedback_id WHERE feedbacks.customer_id = ? ''', (id,))
     columns = c.fetchall()
@@ -3628,7 +3618,7 @@ def ans_feedback_customer(id):
 
 @app.route('/AllProductsForCustomer', methods=['GET'])
 def list_product_for_customer():
-    conn = sqlite3.connect('db/DATAbase.db')
+    conn = sqlite3.connect('DATAbase.db')
     cur = conn.cursor()
 
     query = "SELECT * FROM products"
